@@ -1,0 +1,895 @@
+\documentclass[review]{elsarticle}
+
+\usepackage{lipsum}
+\makeatletter
+\def\ps@pprintTitle{%
+ \let\@oddhead\@empty
+ \let\@evenhead\@empty
+ \def\@oddfoot{}%
+ \let\@evenfoot\@oddfoot}
+\makeatother
+
+\usepackage{amsfonts} 
+\usepackage{fullpage} 
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{amsmath}
+\usepackage{graphicx}
+
+\usepackage{mathrsfs}
+\usepackage{multirow}
+\usepackage{enumitem}
+
+\newcommand\hmmax{0}
+\newcommand\bmmax{0}
+\usepackage{bm}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{amsthm}
+\usepackage{lineno,hyperref}
+
+
+\newcommand{\ip}[1]{\left\langle #1 \right\rangle}
+\newcommand{\transp}{\mathsf{T}}
+\newcommand{\conv}{\operatorname{conv}}
+\newcommand{\unif}{\operatorname{unif}}
+\newcommand{\similarity}{\operatorname{sim}}
+\newcommand{\classlabel}{\operatorname{class\_label}}
+\newcommand{\countind}{\operatorname{count}}
+
+
+\setlength\floatsep{1\baselineskip plus 3pt minus 2pt}
+\setlength\textfloatsep{1\baselineskip plus 3pt minus 2pt}
+\setlength\intextsep{1\baselineskip plus 3pt minus 2 pt}
+
+\makeatletter
+\def\@author#1{\g@addto@macro\elsauthors{\normalsize%
+    \def\baselinestretch{1}%
+    \upshape\authorsep#1\unskip\textsuperscript{%
+      \ifx\@fnmark\@empty\else\unskip\sep\@fnmark\let\sep=,\fi
+      \ifx\@corref\@empty\else\unskip\sep\@corref\let\sep=,\fi
+      }%
+    \def\authorsep{\unskip,\space}%
+    \global\let\@fnmark\@empty
+    \global\let\@corref\@empty  %% Added
+    \global\let\sep\@empty}%
+    \@eadauthor={#1}
+}
+\makeatother
+
+\modulolinenumbers[5]
+
+
+
+%% `Elsevier LaTeX' style
+\bibliographystyle{elsarticle-num}
+%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\theoremstyle{remark}
+\newtheorem{rem}{Remark}
+
+
+\begin{frontmatter}
+
+\title{Improving Sparse Representation-Based Classification\\
+ Using Local Principal Component Analysis}
+
+
+\author{Chelsea Weaver\corref{cor1}}
+\ead{caweaver@math.ucdavis.edu}
+\cortext[cor1]{Corresponding author}
+
+\author{Naoki Saito}
+\ead{saito@math.ucdavis.edu}
+
+\address{Department of Mathematics\\
+University of California, Davis \\
+One Shields Avenue\\
+Davis, California, 95616, United States}
+
+
+\begin{abstract}
+\emph{Sparse representation-based classification} (SRC), proposed by Wright et al., seeks the sparsest decomposition of a test sample over the dictionary of training samples, with classification to the most-contributing class. Because it assumes test samples can be written as linear combinations of their same-class training samples, the success of SRC depends on the size and representativeness of the training set. Our proposed classification algorithm enlarges the training set by using local principal component analysis to approximate the basis vectors of the tangent hyperplane of the class manifold at each training sample. The dictionary in SRC is replaced by a local dictionary that adapts to the test sample and includes training samples and their corresponding tangent basis vectors. We use a synthetic data set and three face databases to demonstrate that this method can achieve higher classification accuracy than SRC in cases of sparse sampling, nonlinear class manifolds, and stringent dimension reduction. 
+\end{abstract}
+
+
+\begin{keyword}
+sparse representation \sep local principal component analysis \sep dictionary learning \sep classification \sep face recognition \sep class manifold 
+\MSC[2016] 00-01\sep  99-00
+\end{keyword}
+
+\end{frontmatter}
+
+%\linenumbers
+
+
+
+
+\section{Introduction}
+
+We are concerned with \emph{classification}, the task of assigning labels to unknown samples given the class information of a training set. Some practical applications of classification include the recognition of handwritten digits \cite{lecun:mnist} and face recognition \cite{wri:src,cev:fr,sur:fr}. These tasks are often very challenging. For example, in face recognition, the classification algorithm must be robust to within-class variation in properties such as expression, face/head angle, changes in hair or makeup, and differences that may occur in the image environment, most notably, the lighting conditions \cite{sur:fr}. Further, in real-world settings, we must be able to handle greatly-deficient training data (i.e., too few or too similar training samples, in the sense that the given training set is insufficient to generalize the data set's class structure) \cite{ssfr:sur}, as well as occlusion and noise \cite{wri:src}. 
+
+In 2009, Wright et al.\ proposed \emph{sparse representation-based classification} (SRC) \cite{wri:src}. SRC was motivated by the recent boom in the use of sparse representation in signal processing (see, e.g., the work of Candes \cite{can:spa}). The catalyst of these advancements was the discovery that, under certain conditions, the sparsest representation of a signal using an over-complete set of vectors (often called a \emph{dictionary}) could be found by minimizing the $\ell^1$-norm of the representation coefficient vector \cite{don:und}. Since the $\ell^1$-minimization problem is convex, this gave rise to a tractable approach to obtaining the sparsest solution. 
+
+SRC applies this relationship between the minimum $\ell^1$-norm and the sparsest solution to classification. The algorithm seeks the sparsest decomposition of a test sample over the dictionary of training samples via $\ell^1$-minimization, with classification to the class whose corresponding portion of the representation approximates the test sample with least error. The method assumes that class manifolds are linear subspaces, so that the test sample can be represented using training samples in its ground truth class. Wright et al.\ \cite{wri:src} argue that this is precisely the sparsest decomposition of the test sample over the training set. They make the case that sparsity is critical to high-dimensional image classification and that, if properly harnessed, it can lead to superior classification performance, even on highly corrupted or occluded images. Further, good results can be achieved regardless of the choice of image features that are used for classification, provided that the number of retained features is large enough \cite{wri:src}. Though SRC was originally applied to face recognition, similar methods have been employed in clustering \cite{elh:ssc}, dimension reduction \cite{qiao:spp}, and texture and handwritten digit classification \cite{yan:sria}. 
+
+
+In this paper, we introduce a classification algorithm that is a modification of SRC. Our algorithm is designed to increase the training set via basis vectors of the hyperplanes approximately tangent to the (unknown) class manifolds. This provides the two-fold benefit of counter-balancing the potential sparse sampling of class manifolds (especially in the case that they are nonlinear) and helping to retain more information in few dimensions when used in conjunction with dimension reduction. The dictionary of training samples in SRC is replaced with a set of vectors consisting of training samples that are close to the given test sample and their corresponding tangent hyperplane basis vectors, increasing the accuracy and locality of the approximation of the test sample in terms of its ground truth class. We demonstrate that this modified dictionary leads to classification accuracy exceeding that of traditional SRC on a synthetic database and three popular face databases.
+
+
+
+The idea of using tangent hyperplanes for pattern recognition is not new. The most relevant instance of this is \emph{tangent distance classification} \cite{sim:tdc,cha:tdc,yan:ltd}, which constructs local tangent hyperplanes of the class manifolds, computes the distances between these hyperplanes and the given test sample, and then classifies the test sample to the class with the closest hyperplane. On the other hand, there has been progress in addressing the limiting linear subspace assumption in SRC. For example, Ho et al.\ extended sparse coding and dictionary learning to general Riemannian manifolds \cite{xie:nlsrc}. Several ``local'' modifications of SRC implicitly ameliorate this issue; in \emph{collaborative neighbor representation-based classification} \cite{waq:cnrc} and \emph{locality-sensitive dictionary learning} \cite{wei:lsdl}, for instance, coefficients of the representation are constrained by their corresponding training samples' distances to the test sample, and so these algorithms need only assume linearity at the local level. Other modifications have aimed at enlarging the training set in SRC specifically for face recognition, for example, using virtual images that exploit the symmetry of the human face as in both the method of Xu et al.\ \cite{xu:mir} and \emph{sample pair based sparse representation classification} \cite{zha:spsrc}. 
+
+Our proposed algorithm does not require explicit knowledge of the class manifolds, as in Ho et al.'s work \cite{xie:nlsrc}, and it is applicable to classification problems outside of face recognition. Further, it is designed to improve not only the locality but also the accuracy of the approximation of the test sample in terms of its ground truth class, and its sparse representation framework gives it an empirical advantage over methods based solely on tangent distance.
+
+This paper is organized as follows: In Section 2, we discuss SRC in more detail. In Section 3, we describe our proposed classification algorithm and discuss its parameters and computational complexity. We present our experimental results in Section 4, and in Section 5, we summarize our findings and discuss related open problems. 
+
+
+
+\textbf{Setup and Notation.} We assume that the input data is represented by vectors in $\mathbb{R}^m$ and that dimension reduction, if used, has already been applied. The training set, i.e., the matrix whose columns are the data samples with known class labels, is denoted by $X_\mathrm{tr} = [\bm{x}_1,\ldots,\bm{x}_{N_\mathrm{tr}}] \in \mathbb{R}^{m\times N_{\mathrm{tr}}}$. The number of classes is denoted by $L \in \mathbb{N}$, and we assume that there are $N_l$ training samples in class $l$, $1\leq l \leq L$. Lastly, we refer to a given test sample by $\bm{y} \in \mathbb{R}^m$. 
+
+
+
+\section{Sparse Representation-Based Classification}
+
+
+SRC \cite{wri:src} solves the optimization problem
+\begin{equation}\label{eq:src_opt}
+\bm{\alpha}^* := \arg \min_{\bm{\alpha}\in \mathbb{R}^{N_\mathrm{tr}}} \|\bm{\alpha}\|_1, \text{ subject to } \bm{y} = X_\mathrm{tr} \bm{\alpha}.
+\end{equation}
+
+It is assumed that the training samples have been normalized to have $\ell^2$-norm equal to $1$, so that the representation in Eq.~\eqref{eq:src_opt} will not be affected by the samples' magnitudes. The use of the $\ell^1$-norm in the objective function is designed to approximate the $\ell^0$-``norm,'' i.e., to aim at finding the smallest number of training samples that can accurately represent the test sample $\bm{y}$. It is argued that the nonzero coefficients in the representation will occur primarily at training samples in the same class, so that
+\begin{equation} \label{eq:src_class}
+\classlabel(\bm{y}) = \arg \min_{1\leq l \leq L} \big\|\bm{y} - X_\mathrm{tr}\delta_l(\bm{\alpha}^*)\big\|_2
+\end{equation}
+produces the correct class assignment. Here, $\delta_l$ is the indicator function that acts as the identity on all coordinates corresponding to samples in class $l$ and sets the remaining coordinates to zero. In other words, $\bm{y}$ is assigned to the class whose training samples contribute the most to the sparsest representation of $\bm{y}$ over the entire training set.
+
+The reasoning behind this is the following: It is assumed that the class manifolds are linear subspaces, so that if each class's training set contains a spanning set of the corresponding subspace, the test sample can be expressed as a linear combination of training samples in its ground truth class. If the number of training samples in each class is small relative to the number of total training samples $N_\mathrm{tr}$, this representation is naturally sparse \cite{wri:src}. 
+
+As real-world data is often corrupted by noise, the constrained $\ell^1$-minimization problem in Eq.~\eqref{eq:src_opt} may be replaced with its regularized version
+\begin{equation} \label{eq:src_opt_noise}
+\bm{\alpha}^* := \arg \min_{\bm{\alpha}\in \mathbb{R}^{N_\mathrm{tr}}} \Big \{\frac{1}{2} \|\bm{y}-X_\mathrm{tr}\bm{\alpha}\|_2^2 + \lambda\|\bm{\alpha}\|_1\Big \}.
+\end{equation}
+Here, $\lambda$ is the trade-off between error in the approximation and the sparsity of the coefficient vector. We summarize SRC in Algorithm 1.
+
+\begin{algorithm}
+\caption{Sparse Representation-Based Classification (SRC) \cite{wri:src}}
+\label{alg:src}
+\begin{algorithmic}[1]
+\STATE \textbf{Input}: Matrix of training samples $X_\mathrm{tr} \in \mathbb{R}^{m\times N_{\mathrm{tr}}}$, test sample $\bm{y} \in \mathbb{R}^m$, number of classes $L$, and error/sparsity trade-off $\lambda$.
+\STATE Normalize each column of $X_\mathrm{tr}$ to have $\ell^2$-norm equal to $1$.
+\STATE Use an $\ell^1$-minimization algorithm to solve either the constrained problem \eqref{eq:src_opt} or the regularized problem \eqref{eq:src_opt_noise}.
+\FOR{each class $l=1,\ldots, L$,}
+\STATE Compute the norm of the class $l$ residual:
+$\mathrm{err}_l(\bm{y}) := \big\|\bm{y} - X_\mathrm{tr}\delta_l(\bm{\alpha}^*)\big\|_2$.
+\ENDFOR
+\STATE \textbf{Output}: The class label of $\bm{y}$ given by
+$\classlabel(\bm{y}) = \arg \min_{1\leq l \leq L} \{\mathrm{err}_l(\bm{y})\}$.
+\end{algorithmic}
+\end{algorithm}
+
+
+
+
+
+\section{Proposed Algorithm}\label{sec:alg}
+
+\subsection{Motivation}
+
+SRC explicitly makes two substantial assumptions: (i) class manifolds are \emph{linear subspaces}, and (ii) the training data in each class \emph{spans} its corresponding linear subspace. These assumptions are often violated. For example, facial images that vary in pose and expression lie on nonlinear class manifolds \cite{row:lle,he:lapface}, and small training set size is one of the primary challenges in face recognition and classification as a whole. 
+
+However, SRC can still achieve high classification accuracy on data sets that violate the first of these assumptions, as demonstrated by Wright et al.\ \cite{wri:src} in experiments on the AR face database \cite{AR:face}. AR contains expression and occlusion variations that suggest the underlying class manifolds are nonlinear, yet SRC often outperformed SVM (support vector machines) on AR for a wide variety of feature extraction methods and feature dimensions \cite{wri:src}. To understand how this is possible, consider that SRC decomposes the test sample over the entire training set, and so components of the test sample not within the span of its ground truth class's training samples may be absorbed by training samples from other classes. A similar ``fail-safe'' occurs when the class manifolds (linear or otherwise) are sparsely sampled, e.g., if the second assumption is violated. However, this reliance on ``off-class'' training samples to partially represent or approximate the test sample can lead to misclassification, especially when the class manifolds are close together. In the case where class manifolds are nonlinear and/or sparsely sampled, so that it is impossible to approximate $\bm{y}$ well using only the training samples in its ground truth class, this approximation could conceivably be improved if we were able to increase the sampling density around $\bm{y}$, ``fleshing out'' its local neighborhood on the (correct) class manifold. Our proposed classification algorithm aims to do just this. 
+
+
+
+
+\subsection{Local Principal Component Analysis Sparse Representation-Based Classification}
+
+Our proposed algorithm, \emph{local principal component analysis sparse representation-based classification} (LPCA-SRC), is essentially SRC with a modified dictionary. This dictionary is constructed in two steps: In the offline phase of the algorithm, we generate new training samples as a means of increasing the sampling density. Instead of the linear subspace assumption in SRC, we assume that class manifolds are well-approximated by local tangent hyperplanes. To generate new training samples, we approximate these tangent hyperplanes at individual training samples using \emph{local principal component analysis} (local PCA), and then add (randomly-scaled and shifted versions of) the basis vectors of these tangent hyperplanes to the original training set. Naturally, the shifted and scaled tangent hyperplane basis vectors (hereon referred to as ``tangent vectors'') inherit the labels of their corresponding training samples. The result is an amended dictionary over which a generic test sample can ideally be decomposed using samples that approximate a local patch on the correct class manifold. In the case that the class manifolds are sparsely sampled and/or nonlinear, this allows for a more accurate approximation of $\bm{y}$ using training samples (and their computed tangent vectors) from the test sample's ground truth class. Even in the case that class manifolds are linear subspaces, this technique ideally increases the sampling density around $\bm{y}$ on its (unknown) class manifold so that it may be expressed in terms of \emph{nearby} samples. 
+
+
+
+In the online phase of LPCA-SRC, this extended training set is ``pruned'' relative to the given test sample, increasing computational efficiency and the locality of the resulting dictionary. Training samples (along with their tangent vectors) are eliminated from the dictionary if their Euclidean distances to the given test sample are greater than a threshold, and then classification proceeds as in SRC as the test sample is sparsely decomposed (via $\ell^1$-minimization) over this local dictionary.
+
+The method in LPCA-SRC has an additional benefit: When SRC is applied to the classification of high-resolution images (e.g., $>O(10^4)$ pixels), some method of dimension reduction is generally necessary to reduce the dimension of the raw samples, due to the high computational complexity of solving the $\ell^1$-minimization problem. Basic dimension reduction methods, such as \emph{principal component analysis} (PCA), may result in the loss of class-discriminating details when the PCA feature dimension is small. In Section \ref{sec:pca_tv}, we show that the tangent vectors computed in LPCA-SRC can contain details of the raw images that have been lost in the dimension reduction process. 
+
+
+We formally state the offline and online portions of our proposed algorithm in Algorithms \ref{lpca_src_offline} and \ref{lpca_src_online}, respectively. Obviously, by the definition of ``offline phase,'' the tangent vectors need only be computed once for any number of test samples. 
+
+\begin{algorithm}
+\caption{Local PCA Sparse Representation-Based Classification (LPCA-SRC): \textbf{OFFLINE PHASE}}
+\label{lpca_src_offline} 
+\begin{algorithmic}[1]
+\STATE \textbf{Input}: $X_\mathrm{tr} = [\bm{x}_1 \ldots, \bm{x}_{N_{\mathrm{tr}}}] \in \mathbb{R}^{m\times N_\mathrm{tr}}$; number of classes $L$; local PCA parameters $d$ (estimate of class manifold dimension) and $n$ (number of neighbors).
+\STATE Normalize the columns of $X_\mathrm{tr}$ to have $\ell^2$-norm equal to $1$.
+\FOR{each class $l=1,\ldots,L$}
+\STATE Let $\mathcal{X}^{(l)}$ be the set of class $l$ training samples contained in $X_\mathrm{tr}$. 
+\FOR{each class $l$ training sample $\bm{x}_i^{(l)}$, $i=1, \ldots,N_l$}
+\STATE Use local PCA in Algorithm \ref{alg1} with set of samples $\mathcal{X}^{(l)}$, selected sample $\bm{x}_i^{(l)}$, and parameters $d$ and $n$ to compute a basis $U^{(l,i)} := [\bm{u}_1^{(l,i)},\ldots,\bm{u}_{d}^{(l,i)}]$ of the tangent hyperplane approximation to the $l$th class manifold at $\bm{x}_i^{(l)}$. Store $U^{(l,i)}$ and $r_i^{(l)} := \| \bm{x}_{i_{n+1}}^{(l)}-\bm{x}_i^{(l)} \|_2$, the distance between $\bm{x}_i^{(l)}$ and its $(n+1)$st nearest neighbor in $\mathcal{X}^{(l)}\backslash \bm{x}_i^{(l)}$. 
+\ENDFOR
+\ENDFOR
+\STATE Define the pruning parameter $r := \text{median} \big\{ r_i^{(l)}\, | \, 1\leq i \leq N_l, \, 1\leq l \leq L \big\}$.
+\STATE Initialize the extended dictionary $D = \emptyset$. 
+\FOR{each class $l=1,\ldots,L$}
+\FOR{each class $l$ training sample $\bm{x}_i^{(l)}$, $i=1, \ldots,N_l$}
+\STATE Set $c:= r \gamma$, $\gamma \sim \unif(0,1)$, and form $\tilde{X}^{(l,i)} := \big[c\bm{u}_1^{(l,i)} + \bm{x}_i^{(l)},\ldots,c\bm{u}_{d}^{(l,i)} + \bm{x}_i^{(l)}, \bm{x}_i^{(l)}\big] \in \mathbb{R}^{m\times(d+1)}$.
+\STATE Normalize the columns of $\tilde{X}^{(l,i)}$ to have $\ell^2$-norm equal to $1$ and add it to the extended dictionary: \\
+$D = [D,\tilde{X}^{(l,i)}]$.
+\ENDFOR
+\ENDFOR
+\STATE \textbf{Output}: The normalized extended dictionary $D \in \mathbb{R}^{m\times (N_\mathrm{\textnormal{tr}}(d+1))}$; pruning parameter $r$.
+\end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}
+\caption{Local PCA Sparse Representation-Based Classification (LPCA-SRC): \textbf{ONLINE PHASE}}
+\label{lpca_src_online} 
+\begin{algorithmic}[1]
+\STATE \textbf{Input}: Test sample $\bm{y} \in \mathbb{R}^m$; normalized extended dictionary $D$; pruning parameter $r$; estimate of class manifold dimension $d$. 
+\STATE Normalize $\bm{y}$ to have $\|\bm{y}\|_2 = 1$.
+\STATE Initialize the pruned dictionary $D_{\bm{y}} = \emptyset$ and set $N_{\bm{y}} = 0$ (\# of columns of $D_{\bm{y}}$).
+\FOR{each class $l = 1,\ldots, L$}
+\FOR{each class $l$ training sample $\bm{x}_i^{(l)}$, $i=1,\ldots,N_l$}
+\IF{$\big\|\bm{y} - \bm{x}_i^{(l)}\big\|_2 \leq r$ or $\big\|\bm{y} - (-\bm{x}_i^{(l)})\big\|_2 \leq r$} 
+\STATE Add the portion $\tilde{X}^{(l,i)}$ of $D$ corresponding to $\bm{x}_i^{(l)}$ and its tangent vectors to the pruned dictionary: $D_{\bm{y}} = [D_{\bm{y}},\tilde{X}^{(l,i)}]$. Assign the columns of $\tilde{X}^{(l,i)}$ class $l$ labels. Update $N_{\bm{y}} = N_{\bm{y}} + (d+1)$.
+\ENDIF
+\ENDFOR
+\ENDFOR
+\STATE Use an $\ell^1$-minimization algorithm to compute the solution to the constrained problem
+\begin{equation} \label{eq:l1_exact}
+\bm{\alpha}^* := \arg \min_{\bm{\alpha}\in \mathbb{R}^{N_{\bm{y}}}} \big \{ \|\bm{\alpha}\|_1 \text{ s.t. } \bm{y} = D_{\bm{y}} \bm{\alpha}\big\}
+\end{equation}
+or the regularized problem
+\begin{equation} \label{eq:l1_approx}
+\bm{\alpha}^* := \arg \min_{\bm{\alpha}\in \mathbb{R}^{N_{\bm{y}}}} \Big \{ \frac{1}{2}\|\bm{y}-D_{\bm{y}} \bm{\alpha}\|_2^2+ \lambda\|\bm{\alpha}\|_1\Big\}.
+\end{equation}
+\FOR{each class $l=1,\ldots, L$,}
+\STATE Compute the norm of the class $l$ residual: 
+$\mathrm{err}_l(\bm{y}) := \big\|\bm{y} - D_{\bm{y}}\delta_l(\bm{\alpha}^*)\big\|_2$.
+\ENDFOR
+\STATE \textbf{Output}: The class label of $\bm{y}$ given by 
+$\classlabel(\bm{y}) = \arg \min_{1\leq l \leq L} \{\mathrm{err}_l(\bm{y})\}$.
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Local Principal Component Analysis}
+
+
+
+In LPCA-SRC (in particular, Step 6 of Algorithm \ref{lpca_src_offline}), we use the local PCA technique of Singer and Wu \cite{sin:vdm} to compute the tangent hyperplane basis $U^{(l,i)}$. We outline our implementation of their method in Algorithm \ref{alg1}. It computes a basis for the tangent hyperplane $T_{\bm{x}_i}\mathscr{M}$ at a point $\bm{x}_i$ on the manifold $\mathscr{M}$, where it is assumed that the local neighborhood of $\bm{x}_i$ on $\mathscr{M}$ can be well-approximated by a tangent hyperplane of some dimension $d<m$. A particular strength of Singer and Wu's method is the weighting of neighbors by their Euclidean distances to the point $\bm{x}_i$, so that closer neighbors play a more important role in the construction of the local tangent hyperplane. 
+
+
+
+\begin{algorithm}
+\caption{Local Principal Component Analysis (Local PCA, adapted from Singer and Wu \cite{sin:vdm})}
+\label{alg1}
+\begin{algorithmic}[1]
+\STATE \textbf{Input}: Set of samples $\mathcal{X}$, selected sample $\bm{x}_i \in \mathcal{X}$, dimension of tangent hyperplane $d$, number of neighbors $n$.
+\STATE Find the $n+1$ nearest neighbors (with respect to Euclidean distance) of $\bm{x}_i$ in $\mathcal{X}\backslash \bm{x}_i$. Store the $n$ nearest neighbors as columns of the matrix $X_i := [\bm{x}_{i_1},\ldots,\bm{x}_{i_n}]$ and use the $(n+1)$st nearest neighbor to define 
+$\epsilon_\mathrm{PCA} := \|\bm{x}_{i_{n+1}} - \bm{x}_i\|_2^2$.
+\STATE Form the matrix $\overline{X}_i$ by centering the columns of $X_i$ around $\bm{x}_i$: $\overline{X}_i := [\bm{x}_{i_1}-\bm{x}_i,\ldots, \bm{x}_{i_n}-\bm{x}_i]$.
+\STATE Form a diagonal weight matrix $D_i$ based on the distance between each neighbor and $\bm{x}_i$ as follows: Let \\
+$D_i(j,j) = \sqrt{K\Big(\frac{\|\bm{x}_{i_j}-\bm{x}_i\|_2}{\sqrt{\epsilon_\mathrm{PCA}}}\Big)}$, $j=1,\ldots,n$, where $K$ is the Epanechnikov kernel given by \\
+$K(u) := (1-u^2)\bm{\chi}_{[0,1]}$.
+\STATE Form the weighted matrix $B_i :=\overline{X}_iD_i$.
+\STATE Find the first $d$ left singular vectors of $B_i$ using singular value decomposition. Denote these vectors by $\bm{u}_1^{(i)},\ldots,\bm{u}_d^{(i)}$.
+\STATE \textbf{Output}: The basis $U^{(l,i)} :=[\bm{u}_1^{(i)},\ldots,\bm{u}_d^{(i)}]$ of the approximated tangent hyperplane at the point $\bm{x}_i$.
+\end{algorithmic}
+\end{algorithm}
+
+
+
+\subsection{Remarks on the Choice of Parameters} \label{sec:pars}
+
+In this subsection, we detail the roles of the parameters in LPCA-SRC and suggest strategies for estimating their optimal values. 
+
+\subsubsection{Estimate of class manifold dimension and number of neighbors} \label{sec:pars_dn}
+
+Recall that $d$ is the estimated dimension of each class manifold and $n$ is the number of neighbors used in local PCA. The number of samples in the smallest training class, denoted $N_{l_\mathrm{min}}$, limits the range of values for $d$ and $n$ that may be used. Specifically, 
+\begin{equation} \label{eq:dn_range}
+d \leq n < N_{l_\mathrm{min}}-1. 
+\end{equation}
+This follows from the fact that each training sample must have at least $n+1$ neighbors in its own class, with the dimension $d$ of the tangent hyperplane being bounded above by the number of columns $n$ in the weighted matrix of neighbors $B_i$. 
+
+While we suggest that $n$ be set using cross-validation, there are many methods for determining $d$. One may use the multiscale SVD algorithm of Little et al.\ \cite{mag:msvd} or Ceruti et al.'s DANCo (\emph{Dimensionality from Angle and Norm Concentration} \cite{cer:dan}). Alternatively, $d$ may be set using cross-validation, as we do in our experiments in Section \ref{sec:exp_res}. Empirically, we find that cross-validation often selects $d$ smaller than the (expected) true class manifold dimension, and in these cases, increasing $d$ from the selected value (i.e., increasing the number of tangent vectors used) does not significantly increase classification accuracy. We expect that the addition of even a small number of tangent vectors (those indicating the directions of maximum variance on their local manifolds, per the local PCA algorithm) is enough to improve the approximation of the test sample in terms of its ground truth class. Additional tangent vectors are often unneeded. Since the value of $d$ largely affects LPCA-SRC's computational complexity, these observations suggest that when the true manifold dimension is large, it is better to underestimate it than overestimate it.
+
+
+
+\begin{rem}
+Certainly, the parameters $d$ and $n$ could vary per class, i.e., $d$ and $n$ could be replaced with $d_l$ and $n_l$, respectively, for $l=1,\ldots,L$. In face recognition, however, if each subject is photographed under similar conditions, e.g., the same set of lighting configurations, then we expect that the class manifold dimension is approximately the same for each subject. Further, without some prior knowledge of the class manifold structure, using distinct $d$ and $n$ for each class may unnecessarily complicate the setting of parameters in LPCA-SRC.
+\end{rem}
+
+
+
+\subsubsection{Pruning parameter} 
+
+Recall that we only include a training sample $\bm{x}_i^{(l)}$ and its tangent vectors in the pruned dictionary $D_{\bm{y}}$ if $\bm{x}_i^{(l)}$ (or its negative) is in the closed Euclidean ball $\overline{B_m(\bm{y}, r)} \subset \mathbb{R}^m$ with center $\bm{y}$ and radius $r$. Thus $r$ is a parameter that prunes the extended dictionary $D$ to obtain $D_{\bm{y}}$. A smaller dictionary is good in terms of computational complexity, as the $\ell^1$-minimization algorithm will run faster. Further, we can obtain this computational speedup without (theoretically) degrading classification accuracy: If $\pm\bm{x}_i^{(l)}$ is far from $\bm{y}$ in terms of Euclidean distance, then it is assumed that $\pm\bm{x}_i^{(l)}$ is not close to $\bm{y}$ in terms of distance along the class manifold. Thus $\bm{x}_i^{(l)}$ and its tangent vectors should not be needed in the $\ell^1$-minimized approximation of $\bm{y}$.
+
+A deeper notion of the parameter $r$ is to view it as a rough estimate of the local neighborhood radius of the data set. More precisely, $r$ estimates the distance from a sample within which its class manifold can be well-approximated by a tangent hyperplane (at that sample). Given $X_{\mathrm{tr}}$ and $n$, $r$ is automatically computed, as described in Algorithm \ref{lpca_src_offline}. That is, we set $r$ to be the median distance between each training sample and its $(n+1)$st nearest neighbor (in the same class), where $n$, the number of neighbors in local PCA, is used to implicitly define the local neighborhood. It follows that $r$ is a robust estimate of the local neighborhood radius, as learned from the training data. 
+
+This also explains our choice for the tangent vector scaling factor $c = r \gamma$, where $\gamma \sim \unif(0,1)$. Multiplying each tangent hyperplane basis vector $\bm{u}_j^{(l,i)}$, $1\leq j \leq d$, by this constant and then shifting it by its corresponding training sample $\bm{x}_i^{(l)}$ helps to ensure that the resulting tangent vector, included in the dictionary $D_{\bm{y}}$ if $\pm\bm{x}_i^{(l)}$ is sufficiently close to $\bm{y}$, lies in the local neighborhood of $\bm{x}_i^{(l)}$ on the $l$th class manifold.
+
+\begin{rem}
+If the test sample $\bm{y}$ is far from the training data, defining $r$ as in Algorithm \ref{lpca_src_offline} may produce $D_{\bm{y}} = \emptyset$, i.e., there may be no training samples within that distance of $\bm{y}$. Thus to prevent this degenerate case, we use a slightly modified technique for setting $r$ in practice. After assigning the median neighborhood radius $r_1 := \mathrm{median} \big\{ r_i^{(l)}\, | \, 1\leq i \leq N_l, \, 1\leq l \leq L \big\}$, we define $r_2$ to be the distance between the test sample $\bm{y}$ and the closest training sample (up to sign). We then define the pruning parameter $r := \max\{r_1,r_2\}$. In the (degenerate) case that $r=r_2$, the dictionary consists of the closest training sample and its tangent vectors, leading to nearest neighbor classification instead of an algorithm error. However, experimental results indicate that the pruning parameter $r$ is almost always equal to the median neighborhood radius $r_1$, and so we leave this ``technicality'' out of the official algorithm statement to make it easier to interpret.
+\end{rem}
+
+
+\subsubsection{Using cross-validation to set multiple parameters} \label{sec:par_set}
+
+On data sets of which we have little prior knowledge, it may be necessary to use cross-validation to set multiple parameters in LPCA-SRC. Since grid search (searching through all parameter combinations in a brute-force manner) is typically expensive, we suggest that cross-validation be applied to the parameters $n$, $\lambda$, and $d$, consecutively in that order as needed. During this process, we recommend holding $\lambda$ equal to a small, positive value (e.g., $0.001$) and setting $d=1$ until their respective values are determined.
+
+Our reasoning for suggesting this procedure is the following: During experiments, we found that the LPCA-SRC algorithm can be quite sensitive to the setting of $n$, especially when there are many samples in each training class (since there are many possible values for $n$). This is expected, as the setting of $n$ affects both the accuracy of the tangent vectors and the pruning parameter $r$. In contrast, LPCA-SRC is empirically fairly robust to the values of $\lambda$ and $d$ used, and further, setting $d=1$ can result in quite good performance in LPCA-SRC, even when the true dimension of the class manifolds is expected to be larger. 
+
+
+
+
+
+\subsection{Computational Complexity and Storage Requirements}\label{sec:cc}
+
+
+
+\subsubsection{Computational complexity of SRC}
+
+When the $\ell^1$-minimization algorithm HOMOTOPY \cite{don:hom} is used, it is easy to see that the computational complexity of SRC is dominated by this step. This complexity is $O(N_\mathrm{tr}m\kappa+ m^2\kappa)$, where $\kappa$ is the number of HOMOTOPY iterations \cite{yan:rev}. HOMOTOPY has been shown to be relatively fast and good for use in robust face recognition \cite{yan:rev}. In our experiments, we use it in all classification methods requiring $\ell^1$-minimization. 
+
+
+
+\subsubsection{Computational complexity of LPCA-SRC}
+
+The computational complexity of the offline phase in LPCA-SRC (Algorithm \ref{lpca_src_offline}) is
+\begin{equation} \label{eq:cc_offline}
+O\Big(m\sum\limits_{l=1}^L N_l^2  + N_\mathrm{tr} mn\Big),
+\end{equation}
+whereas that of the online phase (Algorithm \ref{lpca_src_online}) is
+\begin{equation} \label{eq:cc_online}
+O\Big(N_\mathrm{tr} m + \frac{N_{\bm{y}}}{d} \log\Big(\frac{N_{\bm{y}}}{d}\Big)  + N_{\bm{y}}m\kappa + m^2\kappa  \Big).
+\end{equation}
+Recall that $N_{\bm{y}}$ denotes the number of columns in the pruned dictionary $D_{\bm{y}}$. We note that the offline cost in Eq.~\eqref{eq:cc_offline} is based on the linear nearest neighbor search algorithm for simplicity; in practice there are faster methods. In our experiments, we used ATRIA (\emph{Advanced Triangle Inequality Algorithm} \cite{merk:knn}) via the MATLAB TSTOOL functions \texttt{nn\_prepare} and \texttt{nn\_search} \cite{merk:tstool}. The first function prepares the set of class $l$ training samples $\mathcal{X}^{(l)}$ for nearest neighbor search at the onset, with the intention that subsequent runs of \texttt{nn\_search} on this set are faster than simply doing a search without the preparation function. Other fast nearest neighbor search algorithms are available, for example, \emph{k-d tree} \cite{ben:kdtree}. The cost complexity estimates of these fast nearest neighbor search algorithms are somewhat complicated, and so we do not use them in Eq.~\eqref{eq:cc_offline}. Hence, Eq.~\eqref{eq:cc_offline} could be viewed as the worst-case scenario.
+
+Offline and online phases combined, the very worst-case computational complexity of LPCA-SRC is $O(N_\mathrm{tr}^4)$, which occurs when the second-to-last term in Eq.~\eqref{eq:cc_online} dominates: i.e., when (i) $N_{\bm{y}} \approx (d+1) N_\mathrm{tr}$ (no pruning); (ii) $m \approx N_\mathrm{tr}$ (large relative sample dimension); (iii) very large class manifold dimension estimate $d$, so that $d$ is relatively close to $N_\mathrm{tr}$ (note that this requires very large $N_l$ for $1\leq l \leq L$ by Eq.~\eqref{eq:dn_range}, which implies that $L$ has to be very small); and (iv) $\kappa \approx m$ (many HOMOTOPY iterations). For small $\kappa$ and $N_l$, $1\leq l\leq L$, and when the pruning parameter $r$ results in small $N_{\bm{y}}$ relative to $N_\mathrm{tr}$, then the computational complexity reduces to approximately $O(N_\mathrm{tr}m)$. 
+
+
+
+\subsubsection{Storage requirements}
+
+The primary difference between the storage requirements for LPCA-SRC and SRC is that the offline phase of LPCA-SRC requires storing the matrix $D \in \mathbb{R}^{m \times (d+1)N_\mathrm{tr}}$, which has a factor of $d+1$ as many columns as the matrix of training samples $X_\mathrm{tr} \in \mathbb{R}^{m\times N_\mathrm{tr}}$ stored in SRC. Hence the storage requirements of LPCA-SRC are at worst $(d+1)$ times the amount of storage required by SRC.
+
+
+
+\section{Experiments} \label{sec:exp_res}
+
+We tested the proposed classification algorithm on one synthetic database and three popular face databases. For all data sets, we used HOMOTOPY to solve the regularized versions of the $\ell^1$-minimization problems, i.e., Eq.~\eqref{eq:src_opt_noise} for SRC and Eq.~\eqref{eq:l1_approx} for LPCA-SRC, using version 2.0 of the L1 Homotopy toolbox \cite{asif:hom}.
+
+\subsection{Algorithms Compared}
+
+We compared LPCA-SRC to the original SRC, \emph{SRC}$\mathit{_{\mathrm{pruned}}}$ (a modification of SRC which we explain shortly), two versions of \emph{tangent distance classification} (our implementations are inspired by Yang et al.\ \cite{yan:ltd}), \emph{locality-sensitive dictionary learning SRC} \cite{wei:lsdl}, $\mathit{k}$\emph{-nearest neighbors classification}, and $\mathit{k}$\emph{-nearest neighbors classification over extended dictionary}. 
+
+\begin{itemize}[noitemsep,nolistsep]
+
+\item \textit{SRC$_\mathrm{pruned}$}: To test the efficacy of the tangent vectors in the LPCA-SRC dictionary, this modification of SRC prunes the dictionary of original training samples using the pruning parameter $r$, as in LPCA-SRC. SRC$_{\mathrm{pruned}}$ is exactly LPCA-SRC without the addition of tangent vectors.
+
+\item \textit{Tangent distance classification} (TDC1 and TDC2): We compared LPCA-SRC to two versions of tangent distance classification to test the importance of our algorithm's sparse representation framework. Both of our implementations begin by first finding a pruned matrix $D_{\bm{y}}^{\mathrm{TDC}}$ that is very similar to the dictionary $D_{\bm{y}}$ in LPCA-SRC. In particular, $D_{\bm{y}}^{\mathrm{TDC}}$ can be found using Algorithm \ref{lpca_src_offline} and Steps 1-10 in Algorithm \ref{lpca_src_online}, \emph{omitting Step 2 in each algorithm}. That is, neither the training nor test samples are $\ell^2$-normalized in the TDC methods; compared to the SRC algorithms, TDC1 and TDC2 are not sensitive to the energy of the samples. We emphasize that the resulting matrix $D_{\bm{y}}^{\mathrm{TDC}}$ contains training samples that are nearby $\bm{y}$, as well as their corresponding tangent vectors.
+
+
+In TDC1, we then divide $D_{\bm{y}}^{\mathrm{TDC}}$ into the ``subdictionaries'' 
+$D_{\bm{y}}^{(l)}$, where $D_{\bm{y}}^{(l)}$ contains the portion of $D_{\bm{y}}^{\mathrm{TDC}}$ corresponding to class $l$. The test sample $\bm{y}$ is next projected onto the space spanned by the columns of $D_{\bm{y}}^{(l)}$ to produce the vector $\hat{\bm{y}}^{(l)}$, and the final classification is performed using
+\begin{align*}
+\classlabel(\bm{y}) = \arg \min_{1\leq l \leq L} \big\|\bm{y}-\hat{\bm{y}}^{(l)}\big\|_2.
+\end{align*} 
+
+
+
+Our second implementation, TDC2, is similar. Instead of dividing $D_{\bm{y}}^{\mathrm{TDC}}$ according to class, however, we split it up according to training sample, obtaining the subdictionaries $D_{\bm{y}}^{(l,i)}$, where $D_{\bm{y}}^{(l,i)}$ contains the original training sample $\bm{x}_i^{(l)}$ and its tangent vectors. It follows that each subdictionary in TDC2 has $d+1$ columns. The given test sample $\bm{y}$ is next projected onto the space spanned by the columns of $D_{\bm{y}}^{(l,i)}$ to produce $\hat{\bm{y}}_i^{(l)}$, a vector on the (approximate) tangent hyperplane at $\bm{x}^{(l)}_i$. The final classification is performed using
+\begin{align*}
+\classlabel(\bm{y}) = \arg \min_{1\leq l \leq L}\Big\{\min_{1\leq i \leq N_l} \big\|\bm{y}-\hat{\bm{y}}_i^{(l)}\big\|_2\Big\}.
+\end{align*}
+
+
+\item \textit{Locality-sensitive dictionary learning SRC} (LSDL-SRC): Instead of directly minimizing the $\ell^1$-norm of the coefficient vector, LSDL-SRC replaces the regularization term in Eq.~\eqref{eq:src_opt_noise} of SRC with a term that forces large coefficients to occur only at dictionary elements that are close (in terms of an exponential distance function) to the given test sample. LSDL-SRC also includes a separate dictionary learning phase in which columns of the dictionary are selected from the columns of $X_\mathrm{tr}$. We note that though the name ``LSDL-SRC'' contains the term ``SRC,'' this algorithm is less related to SRC than our proposed algorithm, LPCA-SRC. See Wei et al.'s paper \cite{wei:lsdl} for their reasoning behind this name choice. However, the two algorithms do have very similar objectives, and we thought it important to compare LPCA-SRC and LSDL-SRC in order to validate our alternative approach.
+
+
+\item $\mathit{k}$-\textit{nearest neighbors classification} ($k$NN): The test sample is classified to the most-represented class from among the nearest (in terms of Euclidean distance) $k$ training samples ($k$ is odd).
+
+\item $\mathit{k}$-\textit{nearest neighbors classification over extended dictionary} ($k$NN-Ext): This is $k$NN over the columns of the (full) extended dictionary that includes the original training samples and their tangent vectors. Samples are not normalized at any stage. 
+
+\end{itemize}
+
+
+
+\subsection{Setting of Parameters}
+
+For the synthetic database, we used cross-validation at each instantiation of the training set to choose the best parameters $n$, $\lambda$, and $d$ in LPCA-SRC. (Though the true class manifold dimension is known on this database, we cannot always assume that this is the case.) We optimized the parameters consecutively as described in Section \ref{sec:par_set}, each over its own set of discrete values. The values for $n$ and $d$ had to satisfy the inequalities in Eq.~\eqref{eq:dn_range}. We used the same approach for the parameter $\lambda$ in SRC, the parameters $n$ and $\lambda$ in SRC$_\mathrm{pruned}$, and the parameters $n$ and $d$ in the TDC algorithms. Finally, we used a similar procedure for the multiple parameters in LSDL-SRC (including its number of dictionary elements), and we also set $k$ in $k$NN and $k$NN-Ext using cross-validation. 
+
+
+Our approach for the face databases was very similar, though in order to save computational costs, we set some parameter values according to previously published works. In particular, we set $\lambda = 0.001$ in LPCA-SRC, SRC, and SRC$_\mathrm{pruned}$, as was used in SRC by Waqas et al.\ \cite{waq:cnrc}. Additionally, we set most of the parameters in LSDL-SRC to the values used by its authors \cite{wei:lsdl} on the same face databases, though we again used cross-validation to determine its number of dictionary elements.
+
+
+\subsection{Synthetic Database} 
+
+\subsubsection{Database description}
+
+The following synthetic database is easily visualized, and its class manifolds are nonlinear (though well-approximated by local tangent planes) with many intersections. Thus it is ideal for empirically comparing LPCA-SRC and SRC. The class manifolds are sinusoidal waves normalized to lie on $S^2$, with underlying equations given by
+\begin{align*}
+x(t) &= \cos(t+\phi), \\
+y(t) &= \sin(t+\phi), \\
+z(t) &= A \sin(\omega t).
+\end{align*}
+
+
+We set $\omega = 3$ and $A = 0.5$, and we varied $\phi$ to obtain $L$ classes. In particular, we set $\phi = 2 \pi/(3l)$ for data in class $1\leq l \leq L=4$. For each training and test set, we generated the same number $N_0 = N_l$, $l=1,\ldots,L$, of samples in each class by (i) regularly sampling $t \in [\,0,2\pi)$ to obtain the points $\bm{p}(t) = [x(t),y(t),z(t)]^\transp$; (ii) computing the normalized points $\bm{p}(t)/\|\bm{p}(t)\|_2$; (iii) appending $50$ ``noise dimensions'' to obtain vectors in $\mathbb{R}^{53}$; (iv) adding independent random noise to each coordinate of each point as drawn from the Gaussian distribution $\mathcal{N}(0,\eta^2)$; and lastly (v) re-normalizing each point to obtain vectors of length $ m = 53$ lying on $S^{m-1}$. We performed classification on the resulting data samples. Note that the reason why we turned the original $\mathbb{R}^3$ problem into a problem in $\mathbb{R}^{53}$ was because SRC is designed for high-dimensional classification problems \cite{wri:src} and to make the problem more challenging. We emphasize that we did not apply any method of dimension reduction to this database.
+
+Figure \ref{syn_data_set} shows the first three coordinates of a realization of the training set of the synthetic database. Note that the class manifold dimension is the same for each class and equal to 1. The signal-to-noise (SNR) ratios are displayed in Table \ref{tab:snr} for $N_0 = 25$ and various values of noise level $\eta$. These results were obtained by averaging the mean training sample SNR over 100 realizations of the data set. 
+ 
+
+
+\begin{figure}[t]
+\begin{center}
+\includegraphics[width=0.4\linewidth]{Fig_1}
+\caption{A realization of the first three coordinates of the synthetic database training set with $N_0 = 25$ and $\eta = 0.01$. Nodes denote training samples; colors denote classes. (See the color online copy.) }
+\label{syn_data_set}
+\end{center}
+\end{figure}
+
+\begin{table}[!htb] 
+\centering
+\begin{tabular}{|c|c|c|c|c|c|c|c|}
+\hline
+$\eta = 0.0001$ & $\eta = 0.001$  & $\eta = 0.005$ & $\eta = 0.01$  & $\eta = 0.015$ & $\eta = 0.02$  & $\eta = 0.03$  & $\eta = 0.05$  \\
+\hline
+62.85	& 42.84	&	28.86	&	22.86	&	19.35	&	16.89	&	13.45	&	9.25 \\
+\hline
+\end{tabular}
+\caption{Mean training sample signal-to-noise ratio (in decibels) over 100 realizations of the synthetic database with $N_0 = 25$ and various values of noise level $\eta$.\label{tab:snr}}
+\end{table}
+
+
+
+\subsubsection{Experimental results}
+
+We performed experiments on this database, first varying the number of training samples in each class and then varying the amount of noise. The algorithms LPCA-SRC, SRC, SRC$_\mathrm{pruned}$, and the TDC methods significantly exceeded LSDL-SRC and the $k$NN methods in terms of accuracy in these experiments. In particular, these latter three methods were always outperformed by LPCA-SRC by at least $10\%$ and often by as much as $30\%-40\%$. Though $k$NN-Ext generally performed better than $k$NN, neither method was competitive due to its inability to distinguish individual class manifolds near intersections, a result of considering the classes in terms of a single sample (or tangent vector) at a time. On the other hand, LSDL-SRC was not \emph{local enough}; despite its explicit locality term, this method was unable to distinguish the individual classes from within a local neighborhood of the test sample. Because of their poor performance, we do not report the results of these algorithms here. 
+
+In contrast, the approximations in LPCA-SRC, SRC, and SRC$_\mathrm{pruned}$ typically contained nonzero coefficients solely at one or two dictionary elements bordering the test sample (up to sign) on the correct class manifold. That is, these approximations were \emph{very} sparse, and this sparsity often resulted in correct classification. The TDC methods, though generally not as competitive as these first three algorithms, also showed relatively good performance; when there was a large enough number of training samples in each class, the TDC class-specific subdictionaries were effective in discriminating between classes.
+
+Figure \ref{syn_data_set_varying_class_size} shows the average classification accuracy (over 100 trials) of the competitive algorithms as we varied the number of training samples in each class. We fixed the noise level $\eta = 0.001$. LPCA-SRC generally had the highest accuracy. On average, LPCA-SRC outperformed SRC by 3.5\%, though this advantage slightly decreased as the sampling density increased and the tangent vectors became less useful, in the sense that there were often already enough nearby training samples in the ground truth class of $\bm{y}$ to accurately approximate it without the addition of tangent vectors. SRC and SRC$_\mathrm{pruned}$ had comparable accuracy for all tried values of $N_0$, indicating that the pruning parameter $r$ was effective in removing unnecessary training samples from the SRC dictionary. Further, the increased accuracy of LPCA-SRC over SRC$_\mathrm{pruned}$ suggests that the tangent vectors in LPCA-SRC contributed meaningful class information.
+ 
+The TDC methods performed relatively poorly for small values of $N_0$. At low sampling densities, the TDC subdictionaries were poor models of the (local) class manifolds, leading to approximations of $\bm{y}$ that were often indistinguishable from each other and resulting in poor classification. Both TDC methods improved significantly as $N_0$ increased, with TDC2 outperforming TDC1 and in fact becoming comparable to LPCA-SRC for $N_0 \geq 60$. We attribute this to the extremely local nature of TDC2: It considers a single local patch on a class manifold at a time, rather than each class as a whole. Hence under dense sampling conditions, TDC2 effectively mimicked the successful use of sparsity in LPCA-SRC.
+
+
+\begin{figure}[t]
+\begin{center}
+\includegraphics[width=0.95\linewidth]{Fig_2}
+\caption{Box plot of the average classification accuracy (over 100 trials) of competitive algorithms on the synthetic database with varying training class size $N_0$. We fixed $\eta = 0.001$. (See the color online copy.) }
+\label{syn_data_set_varying_class_size}
+\end{center}
+\end{figure}
+
+In Table \ref{table:syn_time}, we display the runtime-related information of the competitive algorithms with varying training class size. In particular, we report the average runtime (in seconds), the number of columns in each algorithm's dictionary (we refer to this as the ``size'' of the dictionary, as the sample dimension is fixed), and the number of HOMOTOPY iterations. These latter variables are denoted $N$ and $\kappa$, respectively. The runtime does not include the time it took to perform cross-validation. For the TDC methods, we report the average subdictionary sizes, and for conciseness, we display the results for only a handful of the values of $N_0$. We use ``N/A'' to indicate that a particular statistic is not applicable to the given algorithm. 
+
+\begin{table*}[!htb] 
+\small{
+\centering
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+\hline
+& \multicolumn{3}{|c|}{$N_0 = 5$}    & \multicolumn{3}{|c|}{$N_0 = 25$}   & \multicolumn{3}{|c|}{$N_0 = 45$}    & \multicolumn{3}{|c|}{$N_0 = 65$}   \\
+\hline
+Algorithm & t & $N$ & $\kappa$ & t & $N$ & $\kappa$ & t & $N$ & $\kappa$ & t & $N$ & $\kappa$ \\
+\hline
+LPCA-SRC	&	0.01	&	56	&	2	&	0.07	&	80	&	3	&	0.12	&	42	&	3	&	0.16	&	30	&	2	\\
+SRC	&	0.00	&	20	&	2	&	0.04	&	100	&	3	&	0.10	&	180	&	3	&	0.16	&	260	&	3	\\
+SRC$_\mathrm{\textnormal{pruned}}$	&	0.01	&	20	&	2	&	0.05	&	79	&	3	&	0.13	&	146	&	3	&	0.21	&	201	&	3	\\
+TDC1	&	0.01	&	9	&	N/A	&	0.04	&	6	&	N/A	&	0.07	&	5	&	N/A	&	0.09	&	3	&	N/A	\\
+TDC2	&	0.02	&	3	&	N/A	&	0.06	&	2	&	N/A	&	0.09	&	2	&	N/A	&	0.13	&	2	&	N/A	\\
+\hline
+\end{tabular}
+\caption{Average runtime in seconds (t), dictionary size ($N$), and number of HOMOTOPY iterations ($\kappa$) over 100 trials on the synthetic database with varying training class size $N_0$. We fixed $\eta = 0.001$.}
+\label{table:syn_time}}
+\end{table*}
+
+
+
+The dictionary sizes of LPCA-SRC, SRC, and SRC$_\mathrm{\textnormal{pruned}}$ are quite informative. Recall that LPCA-SRC outperformed SRC and SRC$_\mathrm{pruned}$ (by more than 3\%) for the shown values of $N_0$. For $N_0 = 5$, the dictionary in LPCA-SRC was larger than that of the two other methods, adaptively retaining more samples to counter-balance the low sampling density. At large values of $N_0$, LPCA-SRC took full advantage of the increased sampling density, stringently pruning the set of training samples and keeping only those very close to $\bm{y}$. Due to the resulting small dictionary, it had comparable runtime to SRC despite its additional cost of computing tangent vectors. In contrast, without the addition of tangent vectors, SRC$_\mathrm{pruned}$ was forced to keep a large number of training samples in its dictionary; the cost of the dictionary pruning step resulted in SRC$_\mathrm{pruned}$ running slower than SRC, despite its slightly smaller dictionary. (We note that one might expect that SRC$_\mathrm{pruned}$ would always have a smaller dictionary than LPCA-SRC since it does not include tangent vectors; this is not the case, as the value of the number-of-neighbors parameter $n$, and hence the pruning parameter $r$, may be different for the two algorithms.)
+
+The TDC methods ran relatively fast, especially for large values of $N_0$. This is expected, as these algorithms do not require $\ell^1$-minimization. 
+
+Figure \ref{syn_data_set_varying_noise} shows the average classification accuracy (over 100 trials) of the competitive algorithms as we varied the amount of noise. We fixed $N_0 = 25$. (Note that we do not show the runtime results for these experiments; those for varying class size in Table \ref{table:syn_time} are much more revealing.) LPCA-SRC had the highest classification accuracy for low values of $\eta$ (equivalently, when the SNR was high), outperforming SRC by as much as nearly $4\%$. For $\eta \geq 0.015$ (i.e., when the SNR dropped below 20 decibels), LPCA-SRC lost its advantage over SRC and SRC$_\mathrm{pruned}$. This is likely due to noise degrading the accuracy of the tangent vectors. SRC and SRC$_\mathrm{pruned}$ had nearly identical accuracy for all values of $\eta$; again, this illustrates that faraway training samples (as defined by the pruning parameter $r$) did not contribute to the $\ell^1$-minimized approximation of the test sample, and the increased accuracy of LPCA-SRC over SRC$_\mathrm{pruned}$ for low noise values demonstrates the efficacy of the tangent vectors in LPCA-SRC in these cases. We briefly note that when we vary the noise level for larger values of $N_0$, the accuracy of the tangent vectors generally improves. As a result, we see that LPCA-SRC can tolerate higher values of $\eta$ before being outperformed by SRC and SRC$_\mathrm{pruned}$. 
+
+
+TDC2 outperformed TDC1 for all but the largest values of $\eta$, though both algorithms were outperformed by the three SRC methods at this relatively low sampling density for the reasons discussed previously. For $\eta \geq 0.03$, TDC2 began performing worse than TDC1. We expect that the local patches represented by the subdictionaries in TDC2 became poor estimates of the (tangent hyperplanes of the) class manifolds as the noise increased, resulting in a decrease in classification accuracy.
+
+
+
+
+\begin{figure}[t]
+\begin{center}
+\includegraphics[width=0.95\linewidth]{Fig_3}
+\caption{Box plot of the average classification accuracy (over 100 trials) of competitive algorithms on the synthetic databases with varying noise level $\eta$. We fixed $N_0 = 25$. (See the color online copy.)}
+\label{syn_data_set_varying_noise}
+\end{center}
+\end{figure}
+
+
+
+In summary, the experimental results on the synthetic database show that LPCA-SRC can achieve higher classification accuracy than SRC and similar methods when the class manifolds are sparsely sampled and the SNR is large. In these cases, the tangent vectors in LPCA-SRC help to ``fill out'' portions of the class manifolds that lack training samples. When the sampling density was sufficiently high, however, we saw that the tangent vectors in LPCA-SRC were less needed to provide an accurate, local approximation of the test sample, and thus LPCA-SRC offered a smaller advantage over SRC and SRC$_\mathrm{pruned}$. Additionally, for higher noise (i.e., low SNR) cases, the computed tangent vectors were less reliable and the classification performance consequently deteriorated. With regard to runtime, LPCA-SRC appeared to adapt to the sampling density of the synthetic database, and though the addition of tangent vectors initially increased the dictionary size in LPCA-SRC, the online dictionary pruning step allowed for runtime comparable to SRC when the class sizes were large.
+
+
+\subsection{Face Databases} 
+
+\subsubsection{Database description}
+
+The \emph{AR Face Database} \cite{AR:face} contains 70 male and 56 female subjects photographed in two separate sessions held on different days. Each session produced 13 images of each subject, the first seven with varying lighting conditions and expressions, and the remaining six images occluded by either sunglasses or scarves under varying lighting conditions. Images were cropped to $165 \times 120$ pixels and converted to grayscale. In our experiments, we selected the first 50 male subjects and first 50 female subjects, as was done in several papers (e.g., Wright et al.\ \cite{wri:src}), for a total of 100 classes. We performed classification on two versions of this database. The first, which we call ``AR-1,'' contains the 1400 un-occluded images from both sessions. The second version, ``AR-2,'' consists of the images in AR-1 as well as the 600 occluded images (sunglasses and scarves) from Session 1.
+
+The \emph{Extended Yale Face Database B} \cite{geo:illum} contains $38$ classes (subjects) with about $64$ images per class. The subjects were photographed from the front under various lighting conditions. We used the version of Extended Yale B that contains manually-aligned, cropped, and resized images of dimension $192 \times 168$. 
+
+
+The \emph{Database of Faces} (formerly ``The ORL Database of Faces'') \cite{att:orl} contains $40$ classes (subjects) with $10$ images per class. The subjects were photographed from the front against dark, homogeneous backgrounds. The sets of images of some subjects contain varying lighting conditions, expressions, and facial details. Each image in ORL is initially of $92 \times 112$ pixels. 
+
+
+Given existing work on the manifold structure of face databases (e.g., that of Saul and Roweis \cite{row:lle}, He et al.\ \cite{he:lapface}, and Lee et al.\ \cite{lee:linss}), we make the following suppositions: Since images in each class in AR-1 and AR-2 have extreme variations in lighting conditions and differing expressions, the class manifolds of these databases may be nonlinear. Further, the natural occlusions contained in AR-2 make these class manifolds \emph{highly} nonlinear. Alternatively, since the images in each class in Extended Yale B differ primarily in lighting conditions, the class manifolds may be nearly linear. Lastly, since the images in some classes in ORL differ in both lighting conditions and expression, these class manifolds may be nonlinear; however, since the variations are small, these manifolds may be well-approximated by linear subspaces.
+
+With regard to sampling density, we reiterate that Extended Yale B has large class sizes compared to AR and ORL. In our experiments, we randomly selected the same number of samples in each class to use for training, i.e., we set $N_0 \equiv N_l$, $1\leq l \leq L$, where $N_0$ was half the number of samples in each class.\footnote{Since the class sizes vary slightly in Extended Yale B, we set $N_0 = 32$ on this database.} We used the remaining samples for testing.
+
+
+\subsubsection{Dimension reduction}
+ 
+To perform dimension reduction on the face databases, we used (global) PCA to transform the raw images to $m_{\mathrm{PCA}} \in \{30, 56,120\}$ dimensions before performing classification. Similar values for $m_{\mathrm{PCA}}$ were used by Wright et al.\ \cite{wri:src}. For the remainder of this paper, we will refer to the PCA-compressed versions of the raw face images as ``feature vectors'' and $m_\mathrm{PCA}$ as the ``feature dimension.'' We note that the data was not centered (around the origin) in the PCA transform space.
+
+
+
+\subsubsection{Handling occlusion} 
+
+Since AR-2 contains images with occlusion, we considered using the ``occlusion version'' of SRC (with analogous modifications to LPCA-SRC and SRC$_\mathrm{pruned}$) on this database. As discussed by Wright et al.\ \cite{wri:src}, this model assumes that $\bm{y}$ is the summation of the (unknown) true test sample $\bm{y}_0$ and an (unknown) sparse error vector. The resulting modified $\ell^1$-minimization problem consists of appending the dictionary of training samples with the identity matrix $I \in \mathbb{R}^{m\times m}$ and decomposing $\bm{y}$ over this augmented dictionary. For more details, see Section 3.2 of the SRC paper \cite{wri:src}.
+
+%After obtaining the coefficient vector
+%$ [\bm{\alpha}^\transp, \bm{\nu}^\transp ]^\transp$ for $\bm{\nu} \in \mathbb{R}^m$, it is assumed that $\bm{\alpha}$ corresponds to the sparse linear approximation of $\bm{y}_0$ over the original dictionary. The test sample $\bm{y}$ is then replaced with $\bm{y}-\bm{\nu}$ in each algorithm when computing the norms of the class residuals. For more details, see Section 3.2 of the SRC paper \cite{wri:src}.
+
+However, the context in which Wright et al.\ use the occlusion version of SRC on the AR database is critically different than our experimental setup here \cite{wri:src}. In the SRC paper, the samples with occlusion make up the test set. In our case, both the training and test set contain samples with and without occlusion. As a consequence, occluded samples in the training set can be used to express test samples with occlusion, and on the other hand, the use of the identity matrix to extend the dictionary in SRC results in too much error allowed in the approximation of un-occluded samples. Correspondingly, we see much worse classification performance in SRC when we use its occlusion version on AR-2. Hence, we stick to Algorithm \ref{alg:src} (the original version of SRC) on all face databases.
+
+
+
+
+
+
+\subsubsection{AR Face Database results} \label{sec:AR}
+
+Table \ref{AR_results_acc} displays the average accuracy and standard error over 10 trials for the two versions of AR. LPCA-SRC had substantially higher classification accuracy than the other methods on both versions of AR with $m_\mathrm{PCA} = 30$. This suggests that the tangent vectors in LPCA-SRC were able to recover important class information lost in the stringent PCA dimension reduction. As $m_\mathrm{PCA}$ increased, however, the methods SRC, SRC$_\mathrm{pruned}$, and LSDL-SRC became more competitive, as more discriminative information was retained in the feature vectors and less needed to be provided by the LPCA-SRC tangent vectors. SRC$_\mathrm{pruned}$ had comparable accuracy to SRC, indicating that, once again, training samples could be removed from the SRC dictionary using the pruning parameter $r$ without decreasing classification accuracy. In some cases, the removal of these faraway training samples slightly improved class discrimination.
+
+For the most part, the other algorithms performed poorly on AR. The exception was LSDL-SRC, which had comparable accuracy to LPCA-SRC for $m_\mathrm{PCA} = 120$ (slightly outperforming it for AR-1) and beat SRC on AR-1 for $m_\mathrm{PCA} = 56$. However, LSDL-SRC had lower accuracy than the SRC algorithms for $m_\mathrm{PCA} = 30$ on both versions of this database. In contrast, the TDC methods performed relatively better for $m_\mathrm{PCA}=30$ than for larger values of $m_\mathrm{PCA}$ due to their more effective use of tangent vectors at this small feature dimension. Overall, however, their class-specific dictionaries were not as effective on this nonlinear, sparsely sampled database as the multi-class dictionaries of the previously-discussed algorithms. Further, TDC2 often had notably high standard error, presumably because of its sensitivity to the value of the manifold dimension estimate $d$. This could perhaps be mitigated by using a different cross-validation procedure. Lastly, $k$NN and $k$NN-Ext had the lowest classification accuracies, though $k$NN-Ext offered a slight improvement over $k$NN. Both methods consistently selected $k=1$ during cross-validation.
+
+
+\begin{table*}[!htb]
+\small{
+\centering
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+\hline
+& \multicolumn{6}{|c|}{AR-1} & \multicolumn{6}{|c|}{AR-2} \\
+\hline
+& \multicolumn{2}{|c|}{$m_{\mathrm{PCA}} = 30$} & \multicolumn{2}{|c|}{$m_{\mathrm{PCA}} = 56$}  & \multicolumn{2}{|c|}{$m_{\mathrm{PCA}} = 120$}  & \multicolumn{2}{|c|}{$m_{\mathrm{PCA}} = 30$}  & \multicolumn{2}{|c|}{$m_{\mathrm{PCA}} = 56$} & \multicolumn{2}{|c|}{$m_{\mathrm{PCA}} = 120$}  \\
+\hline
+Algorithm & Acc & SE  & Acc & SE  &  Acc & SE  &  Acc & SE  &  Acc & SE &   Acc & SE   \\
+\hline
+LPCA-SRC	& \textbf{0.8663}	& 4.1	 & \textbf{0.9544}	& 2.3 & 0.9711	& 1.7 & \textbf{0.7328}	& 6.0 & \textbf{0.8844}	& 3.6 & \textbf{0.9512}	&  2.6 \\
+SRC		& 0.8273	& 4.2		& 0.9357 &	2.6	& 0.9631		& 1.6 & 0.6945	&  4.3 & 0.8713	& 2.0 & 0.9450	& 2.4 \\
+SRC$_\text{pruned}$ 	& 0.8277	& 4.8	&	0.9353	& 3.8 & 0.9651	& 1.8 & 0.7092	& 4.0 & 0.8781	& 2.7 & 0.9459	& 2.5\\
+TDC1	&	0.8046	&	6.5		&	0.8430	&	5.1 &	0.8634	&	5.9	&	0.6899	&	4.1	&	0.7603	&	3.7 &	0.7985	&	4.5\\
+TDC2		&	0.7549	&	19.4		&	0.8137	&	11.9	&	0.8303	&	15.4 & 0.6422	& 16.1 &	0.7386	&	3.3 &	0.7735	&	4.4 \\
+LSDL-SRC		& 0.8184	& 4.0		&  0.9424	& 2.0 & \textbf{0.9756}	& 0.9 & 0.6585	& 5.6 & 0.8610	& 2.2 & 0.9498	& 2.9 \\
+$k$NN 	& 0.5846	& 4.6	&  0.6301	& 8.0 & 0.6461	& 4.9 & 0.4100	& 3.0 & 0.4297	& 5.0 & 0.4554	& 3.2\\
+$k$NN-Ext & 0.6036	& 4.5	&  0.6487	& 8.2 & 0.6677	& 4.7 & 0.4311	& 3.7 & 0.4526	& 2.9 & 0.4794	& 5.7  \\
+\hline
+\end{tabular}
+\caption{Average accuracy and standard error ($\times 10^{-3}$) over 10 trials on AR.} 
+\label{AR_results_acc}}
+\end{table*}
+
+
+
+Table \ref{AR_results_time} displays the average runtime and related results (over 10 trials) of the various classification algorithms for both versions of AR. The ``dictionary size'' $N$ for $k$NN and $k$NN-Ext refers to the average size of the set from which the $k$-nearest neighbors are selected (e.g., for $k$NN, $N = N_\text{tr}$). 
+
+The generally large dictionary sizes of LPCA-SRC (and its consequently long runtimes) indicate that minimal dictionary pruning often occurred. Thus LPCA-SRC was generally slower than SRC and SRC$_\mathrm{pruned}$. However, on AR-2 with $m_\mathrm{PCA}=30$, LPCA-SRC was able to eliminate many training samples from its dictionary, due to its effective use of tangent vectors on the (presumably) highly-nonlinear class manifolds of AR-2. At this low feature dimension, the computed tangent vectors contained more class discriminative information than nonlocal training samples, likely allowing for a more accurate---and local---approximation of $\bm{y}$ on its ground truth class manifold. LPCA-SRC was faster than SRC and SRC$_\mathrm{pruned}$ (which kept a large number of training samples) in this case, and this is impressive, considering that LPCA-SRC also outperformed these methods by nearly $4\%$ and more than $2\%$, respectively.
+
+
+Despite not requiring $\ell^1$-minimization, the TDC methods were often the slowest algorithms on the AR databases. We suspect that this is largely due to the relatively large number of classes in AR---recall that both TDC methods must compute least squares solutions (in TDC2, sometimes many of them) for each class represented in the pruned dictionary $D_{\bm{y}}^{\mathrm{TDC}}$. Further, TDC2 selected a relatively large value of $d$ during cross-validation (presumably so that its subdictionaries would contain a wider ``snapshot'' of the class manifolds), which made it even less efficient. The runtime of LSDL-SRC, unlike those of most of the other algorithms, was fairly insensitive to the feature dimension, and as a result, LSDL-SRC was relatively efficient for $m_\mathrm{PCA} \in \{56,120\}$. However, the expense of its dictionary learning phase for $m_\mathrm{PCA}=30$, at which the $\ell^1$-minimization algorithm in the SRC methods could be solved efficiently, resulted in LSDL-SRC's relatively slow runtime. Both $k$NN methods ran significantly faster than all the other methods.
+
+
+
+
+\begin{table*}[!htb] 
+\footnotesize{
+\centering
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}
+\hline
+& \multicolumn{9}{|c|}{AR-1}\\
+\hline
+& \multicolumn{3}{|c|}{$m_\mathrm{PCA} = 30$} &  \multicolumn{3}{|c|}{$m_\mathrm{PCA} = 56$}    & \multicolumn{3}{|c|}{$m_\mathrm{PCA} = 120$}\\
+\hline
+Algorithm & t & $N$ & $\kappa$ & t & $N$ & $\kappa$ & t & $N$ & $\kappa$ \\
+\hline
+LPCA-SRC	          & 7.25	& 435	& 61	& 12.50	& 676	& 87	& 19.07	& 795	& 112	\\
+SRC	                & 6.11	& 700	& 51	& 8.87	& 700	& 72  & 13.57	& 700	& 99\\
+SRC$_\mathrm{pruned}$	& 3.76	& 231	& 39	& 5.10	& 226	& 49	& 6.90	& 232	& 60 \\
+TDC1	              &	11.82	&	16	&	N/A	&	14.24	&	16	&	N/A &	24.30	&	19	&	N/A	\\
+TDC2	              &	8.89	&	5	  &	N/A	&	16.79	&	5	  &	N/A &	36.68	&	5	  &	N/A	 \\
+LSDL-SRC	          & 7.78	& 440	& N/A & 8.55	& 470	& N/A & 9.72	& 490	& N/A \\
+$k$NN               & 0.01	& 700 & N/A	&	0.01	& 700 & N/A	&	0.02	& 700 & N/A \\
+$k$NN-Ext           & 0.08	& 2170 & N/A	&	0.09	& 2240 & N/A	&	0.16	& 2660 & N/A \\
+
+
+\hline
+& \multicolumn{9}{|c|}{AR-2}\\
+\hline
+& \multicolumn{3}{|c|}{$m_\mathrm{PCA} = 30$} &  \multicolumn{3}{|c|}{$m_\mathrm{PCA} = 56$}    & \multicolumn{3}{|c|}{$m_\mathrm{PCA} = 120$}\\
+\hline
+Algorithm & t & $N$ & $\kappa$ & t & $N$ & $\kappa$ & t & $N$ & $\kappa$ \\
+\hline
+LPCA-SRC	          & 10.53	 & 478	& 58  & 35.27	 & 1593	  & 10     & 56.17	  & 1690	& 151 \\
+SRC	                & 11.39	 & 1000	& 58  & 17.67	 & 1000	  & 85     & 27.74  	& 1000	& 121 \\
+SRC$_\mathrm{pruned}$	& 11.12	 & 788	& 54  & 16.63	 & 775	  & 77     & 24.88	  & 767	  & 107 \\
+TDC1	              &	20.56	 &	25	&	N/A &	27.51	 &	26	  &	N/A    &	43.07	  &	26	  &	N/A \\
+TDC2	              &	20.93	 &	6	  &	N/A &	47.57	 &	6	    &	N/A    &	103.80	&	6	    &	N/A \\
+LSDL-SRC	          & 22.70	 & 750	& N/A & 16.34	 & 620	  & N/A    & 22.19	  & 710	  & N/A \\
+$k$NN               &	 0.02  & 1000  & N/A	&	0.02	 & 1000    & N/A 	 &	0.04	  & 1000   & N/A \\
+$k$NN-Ext           & 0.13	 & 4300  & N/A	&	0.15	 & 3600    & N/A    &	0.29	  & 4400   & N/A \\
+
+\hline
+\end{tabular}
+\caption{Average runtime in seconds (t), dictionary size ($N$), and number of HOMOTOPY iterations ($\kappa$) over 10 trials on AR.} 
+\label{AR_results_time}}
+\end{table*}
+
+
+\subsubsection{Extended Yale Face Database B and Database of Faces (``ORL'') results} \label{sec:yale_orl}
+
+
+Table \ref{Ext_Yale_B_ORL_res} displays the average accuracy and standard error for Extended Yale B (over 10 trials) and ORL (over 50 trials). On Extended Yale B, LPCA-SRC had the highest accuracy for all $m_\mathrm{PCA}$, though as we saw on the AR database, this advantage decreased as $m_\mathrm{PCA}$ increased and SRC became more competitive. SRC and SRC$_\mathrm{pruned}$ had very similar accuracy, indicating that training samples excluded from the dictionary via the pruning parameter $r$ did not provide class information in the SRC framework. TDC1 and TDC2 had consistently mediocre performance, neither one outperforming the other over all settings of $m_\mathrm{PCA}$, and LSDL-SRC improved as $m_\mathrm{PCA}$ increased, analogous to its behavior on AR. However, LSDL-SRC was clearly outperformed by LPCA-SRC, even for $m_\mathrm{PCA}=120$, suggesting that the improved approximations in LPCA-SRC via its use of tangent vectors were more effective (even at this high feature dimension) than the procedure in LSDL-SRC. Along these same lines, the tangent vectors in $k$NN-Ext offered a considerable improvement over $k$NN, though once again both methods reported lower accuracy than all the other algorithms. As on AR, the $k$NN methods consistently selected $k=1$ during cross-validation.
+
+
+On ORL, LPCA-SRC and SRC$_\mathrm{pruned}$ had comparable accuracy and outperformed SRC. This indicates that: (i) the pruning parameter $r$ in LPCA-SRC and SRC$_\mathrm{pruned}$ was \emph{helpful} to classification (instead of simply being benign); and (ii) the tangent vectors computed in LPCA-SRC were not. With regard to (i), it must be the case that faraway training samples---those in different classes from the test sample---contributed significantly to the approximation of the test sample in SRC, negatively affecting classification performance. This is an example of \emph{sparsity not necessarily leading to locality} (as it is relevant to class discrimination), as discussed in the LSDL-SRC paper \cite{wei:lsdl}. With regard to (ii), we suspect that the tangent vectors in LPCA-SRC were simply \emph{unneeded} to improve the classification performance on ORL. Though the approximations in SRC contained nonzero coefficients at training samples not in the same class as $\bm{y}$---presumably because of the sparse sampling and nonlinear structure of the class manifolds---many of these wrong-class training samples could be eliminated simply based on their distance to $\bm{y}$. This suggests that ORL's class manifolds can be fairly well-separated via Euclidean distance. An additional reason for (ii) was because the PCA transform to the dimensions specified in this experiment did not result in a loss of too much information, at least compared to AR and Extended Yale B. See Table \ref{tab:energy} at the end of Section \ref{sec:pca_tv} for this comparison.
+
+
+All of the remaining methods performed relatively well on ORL. The accuracies of TDC1 and TDC2 were similar and comparable to those of SRC. We ascertained that the success of the TDC methods was not due to their use of tangent vectors but instead the result of their ``per-class'' approximations of the test sample. This approach was very effective on the (presumably) well-separated class manifolds of ORL. Strikingly, the accuracy of LSDL-SRC was relatively low for $m_\mathrm{PCA} = 120$, opposite to the trend we saw on the previous face databases. The performance of LSDL-SRC could be improved for $m_\mathrm{PCA}=120$ on this database if the samples were centered (around the origin) after PCA dimension reduction. However, we confirmed that LDSL-SRC was still outperformed by LPCA-SRC in this case (albeit by a smaller margin), and its performance with centering on the other face databases was much worse than our reported results. In contrast to the results on Extended Yale B, $k$NN-Ext only provided a slight increase in accuracy over $k$NN, with the tangent vectors mimicking their unnecessary role in LPCA-SRC on this database. The value $k=1$ was consistently selected by both $k$NN and $k$NN-Ext during cross-validation. 
+
+
+\begin{table*}[!htb] 
+\small{
+\centering
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+\hline
+& \multicolumn{6}{|c|}{Extended Yale B} & \multicolumn{6}{|c|}{ORL} \\
+\hline
+& \multicolumn{2}{|c|}{$m_{\mathrm{PCA}} = 30$} & \multicolumn{2}{|c|}{$m_{\mathrm{PCA}} = 56$}  & \multicolumn{2}{|c|}{$m_{\mathrm{PCA}} = 120$}  & \multicolumn{2}{|c|}{$m_{\mathrm{PCA}} = 30$}  & \multicolumn{2}{|c|}{$m_{\mathrm{PCA}} = 56$} & \multicolumn{2}{|c|}{$m_{\mathrm{PCA}} = 120$}  \\
+\hline
+Algorithm & Acc & SE  & Acc & SE  &  Acc & SE  &  Acc & SE  &  Acc & SE &   Acc & SE   \\
+\hline
+LPCA-SRC & \textbf{0.9049}	&	2.9	&	\textbf{0.9530}	&	1.7	&	\textbf{0.9710}	&	1.6	&	\textbf{0.9507}	&	24.0	&	\textbf{0.9600}	&	18.0	&	0.9602	&	17.0 \\
+SRC & 0.8803	&	2.6	&	0.9371	&	2.8	&	0.9633	&	1.4	&	0.9374	&	24.0	&	0.9437	&	22.9	&	0.9422	&	18.8 \\
+SRC$_\text{pruned}$ & 0.8804	&	2.7	&	0.9371	&	2.6	&	0.9635	&	1.5	&	0.9506	&	23.7	&	0.9580	&	23.5	&	\textbf{0.9605}	&	19.3 \\
+TDC1 &	0.8568	&	10.0	&	0.9285	&	2.0	&	0.9446	&	2.8 	&	0.9364	&	27.1	&	0.9457	&	25.4	&	0.9455	&	21.1	\\
+TDC2 &	0.8826	&	3.9	&	0.9093	&	2.8	&	0.9283	&	3.5 	&	0.9351	&	29.8	&	0.9429	&	31.1	&	0.9418	&	23.3	\\
+LSDL-SRC & 0.7495	&	4.8	&	0.8774	&	2.5	&	0.9492	&	2.0	&	0.9358	&	25.2	&	0.9515	&	19.9	&	0.9251	&	24.3	\\
+$k$NN & 0.4300	& 3.5	& 0.5346	& 2.6	& 0.6245	& 3.8	& 0.9332	&	26.3	&	0.9387	&	24.7	&	0.9396	&	23.2 \\
+$k$NN-Ext & 0.5464	& 6.9	& 0.6321	& 5.6	& 0.7058	& 5.4	& 0.9338	&	30.5	&	0.9412	&	28.9	&	0.9386	&	23.9\\
+\hline
+\end{tabular}
+\caption{Average accuracy and standard error ($\times 10^{-4}$) on Extended Yale B (over 10 trials) and ORL (over 50 trials).} 
+\label{Ext_Yale_B_ORL_res} }
+\end{table*}
+
+
+Tables \ref{Ext_Yale_B_time} and \ref{ORL_time} show the runtime and related results for the Extended Yale B and ORL experiments, respectively. LPCA-SRC had much longer runtimes than SRC on Extended Yale B, especially as $m_\mathrm{PCA}$ increased. This was due to a combination of large values for $d$ selected during cross-validation and the tangent vectors' decreasing efficacy at larger feature dimensions. However, the dictionary pruning procedure in LPCA-SRC actually eliminated a large number of training samples for all $m_\mathrm{PCA}$; once again, the computed tangent vectors contained more class-discriminating information than the eliminated nonlocal training samples, especially at lower feature dimensions for which details provided by these tangent vectors were especially needed. The (presumed) linearity of the class manifolds of Extended Yale B, combined with this database's relatively dense sampling, lent itself well to the accurate computation of tangent vectors---part of the reason why LPCA-SRC used so many of them. Viewing these points as newly-generated and nearby training samples, LPCA-SRC's boost in accuracy over SRC can be viewed as an argument for locality in classification. We note that we might be able to decrease the value of $d$ in LPCA-SRC while still maintaining an advantage over SRC (see the discussion in Section \ref{sec:pars_dn}); our cross-validation procedure is designed to obtain the highest accuracy with no regard to computational cost. 
+
+On Extended Yale B, the TDC methods ran relatively more quickly (compared to the other algorithms) than on AR, presumably due to the much smaller number of classes on this database; both had runtimes typically between those of LPCA-SRC and SRC. Again, we see that LSDL-SRC had a relatively slow runtime for $m_\mathrm{PCA} = 30$ and became more competitive as $m_\mathrm{PCA}$ increased. Though both $k$NN and $k$NN-Ext were very fast, the large ``dictionary sizes'' in $k$NN-Ext made this algorithm clearly the slower of the two methods.
+
+
+On ORL, LPCA-SRC and SRC had comparable runtimes, a result of rigorous dictionary pruning in LPCA-SRC. This algorithm and SRC$_\mathrm{pruned}$ retained roughly the same number of training samples in their respective dictionaries, and the latter was notably fast, running in about half the time as SRC. The remaining algorithms were even more efficient. TDC1 and TDC2 had comparable runtimes, both running faster than LSDL-SRC. As before, $k$NN and $k$NN-Ext had the fastest runtimes; the former was faster than the latter.
+
+
+
+
+
+
+\begin{table*}[!htb] 
+\small{
+\centering
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}
+\hline
+& \multicolumn{3}{|c|}{$m_{\mathrm{PCA}} = 30$} & \multicolumn{3}{|c|}{$m_{\mathrm{PCA}} = 56$} & \multicolumn{3}{|c|}{$m_{\mathrm{PCA}} = 120$} \\
+\hline
+Algorithm & t & $N$ & $\kappa$ & t & $N$ & $\kappa$ & t & $N$ & $\kappa$ \\
+\hline
+LPCA-SRC	& 29.20	& 1922	& 75	& 72.12	& 3359	& 120	& 141.97	& 3785	& 182 \\
+SRC	& 15.58	& 1216	& 62	& 24.70	& 1216	& 91	& 41.94	& 1216	& 137 \\
+SRC$_\mathrm{pruned}$ & 15.92	& 1111	& 61	& 23.81	& 1112	& 88	& 40.50	& 1115	& 131 \\
+TDC1 &	8.10	&	20	&	N/A	&	27.62	&	59	&	N/A	&	42.83	&	59	&	N/A	\\
+TDC2 &	11.68	&	6	&	N/A	&	23.51	&	6	&	N/A	&	56.01	&	6	&	N/A	\\
+LSDL-SRC	& 67.30	& 1186	& N/A	& 53.03	& 1003	& N/A	& 38.73	& 821	& N/A \\
+$k$NN &	0.02	& 1216 & N/A &	0.03	& 1216 & N/A &	0.05	& 1216 & N/A \\
+$k$NN-Ext &	0.17	& 5350 & N/A &	0.25	& 4742 & N/A &	0.44	& 4864 & N/A \\	
+\hline
+\end{tabular}
+\caption{Average runtime in seconds (t), dictionary size ($N$), and number of HOMOTOPY iterations ($\kappa$) over 10 trials on Extended Yale B.} 
+\label{Ext_Yale_B_time}}
+\end{table*}
+
+
+\begin{table*}[!htb] 
+\small{
+\centering
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}
+\hline
+& \multicolumn{3}{|c|}{$m_{\mathrm{PCA}} = 30$} & \multicolumn{3}{|c|}{$m_{\mathrm{PCA}} = 56$} & \multicolumn{3}{|c|}{$m_{\mathrm{PCA}} = 120$} \\
+\hline
+Algorithm & t & $N$ & $\kappa$ & t & $N$ & $\kappa$ & t & $N$ & $\kappa$ \\
+\hline
+	LPCA-SRC	&	0.54	&	59	&	26	&	0.73	&	72	&	34	&	1.22	&	111	&	50	\\
+	SRC	&	0.85	&	200	&	40	&	1.34	&	200	&	57	&	2.09	&	200	&	81	\\
+	SRC$_\mathrm{pruned}$	&	0.25	&	19	&	12	&	0.34	&	26	&	16	&	0.53	&	39	&	24	\\
+	TDC1	&	0.12	&	1	&	N/A	&	0.16	&	1	&	N/A	&	0.34	&	1	&	N/A	\\
+	TDC2	&	0.12	&	3	&	N/A	&	0.23	&	3	&	N/A	&	0.53	&	3	&	N/A	\\
+	LSDL-SRC	&	1.04	&	116	&	N/A	&	1.09	&	121	&	N/A	&	0.93	&	102	&	N/A	\\
+	kNN	&	0.01	&	200	&	N/A	&	0.01	&	200	&	N/A	&	0.01	&	200	&	N/A	\\
+	kNN-Ext	&	0.03	&	568	&	N/A		&	0.03	&	592	&	N/A		&	0.04	&	568	&	N/A	\\
+
+\hline
+\end{tabular}
+\caption{Average runtime in seconds (t), dictionary size ($N$), and number of HOMOTOPY iterations ($\kappa$) over 50 trials on ORL.} 
+\label{ORL_time}}
+\end{table*}
+
+
+
+
+\subsubsection{Tangent vectors and PCA feature dimension} \label{sec:pca_tv}
+
+In this section, we offer evidence to support our claim that the tangent vectors in LPCA-SRC can recover discriminative information lost during PCA transforms to low dimensions. Thus LPCA-SRC can offer a clear advantage over SRC in these cases, as we saw in experimental results on AR and Extended Yale B. 
+
+In Figures \ref{fig:AR_PCA_2}-\ref{fig:AR_PCA_4}, we display three versions of three example images from AR-1. The first version is the original image (before PCA dimension reduction), the second version is the recovered image from PCA dimension reduction to dimension $m_\mathrm{PCA} = 30$, and the third version is the recovered corresponding tangent vector computed in LPCA-SRC. In each case, the tangent vector contains details of the original image not found in the recovered image, supporting our claim that the tangent vectors in LPCA-SRC can recover some (but not all) of the information lost in stringent PCA dimension reduction. 
+
+
+Towards quantifying what we mean by ``stringent,'' Table \ref{tab:energy} lists the average energy (over 10 trials) retained in the first $m_\mathrm{PCA}$ left-singular vectors of the face database training sets, along with the percent improvement in the accuracy of LPCA-SRC with respect to that of SRC and SRC$_\mathrm{pruned}$. We reiterate that the addition of tangent vectors did not increase classification accuracy on ORL. Taking this into account, we see a correlation between the efficacy of tangent vectors in LPCA-SRC and the stringency of the PCA dimension reduction. 
+
+
+\begin{figure}[H]
+ \hspace*{\fill}
+\centering
+\begin{subfigure}[b]{0.18\textwidth}
+\centering
+	\includegraphics[width=\linewidth]{Fig_4a}
+		\caption{Original Image}
+	\label{fig:orig_image_ex_2} \hfill
+\end{subfigure}
+\begin{subfigure}[b]{0.18\textwidth} 
+\centering
+	\includegraphics[width=\linewidth]{Fig_4b}
+		\caption{Recovered Image}
+	\label{fig:recov_image_ex_2} \hfill
+\end{subfigure}
+\begin{subfigure}[b]{0.18\textwidth} 
+\centering
+	\includegraphics[width=\linewidth]{Fig_4c}
+		\caption{Tangent Vector}
+	\label{fig:tv_ex_2}
+	\hfill
+\end{subfigure}
+\hspace*{\fill}
+\caption{The tangent vector does a much better job of displaying facial details conveying ``happiness'' (displayed in the original image) than the recovered image. Images (b) and (c) were recovered from PCA dimension $m_\mathrm{PCA}=30$.}
+\label{fig:AR_PCA_2}
+\end{figure}
+
+\begin{figure}[H]
+ \hspace*{\fill}
+\centering
+\begin{subfigure}[b]{0.18\textwidth}
+\centering
+	\includegraphics[width=\linewidth]{Fig_5a}
+		\caption{Original Image}
+	\label{fig:orig_image_ex_3} \hfill
+\end{subfigure}
+\begin{subfigure}[b]{0.18\textwidth} 
+\centering
+	\includegraphics[width=\linewidth]{Fig_5b}
+		\caption{Recovered Image}
+	\label{fig:recov_image_ex_3} \hfill
+\end{subfigure}
+\begin{subfigure}[b]{0.18\textwidth} 
+\centering
+	\includegraphics[width=\linewidth]{Fig_5c}
+		\caption{Tangent Vector}
+	\label{fig:tv_ex_3}
+	\hfill
+\end{subfigure}
+\hspace*{\fill}
+\caption{The tangent vector does a better job of displaying facial details conveying ``anger'' (displayed in the original image) than the recovered image, most notably in the subject's eyes and eyebrows. Images (b) and (c) were recovered from PCA dimension $m_\mathrm{PCA}=30$.}
+\label{fig:AR_PCA_3}
+\end{figure}
+
+
+\begin{figure}[H]
+ \hspace*{\fill}
+\centering
+\begin{subfigure}[b]{0.18\textwidth}
+\centering
+	\includegraphics[width=\linewidth]{Fig_6a}
+		\caption{Original Image}
+	\label{fig:orig_image_ex_4} \hfill
+\end{subfigure}
+\begin{subfigure}[b]{0.18\textwidth} 
+\centering
+	\includegraphics[width=\linewidth]{Fig_6b}
+		\caption{Recovered Image}
+	\label{fig:recov_image_ex_4} \hfill
+\end{subfigure}
+\begin{subfigure}[b]{0.18\textwidth} 
+\centering
+	\includegraphics[width=\linewidth]{Fig_6c}
+		\caption{Tangent Vector}
+	\label{fig:tv_ex_4}
+	\hfill
+\end{subfigure}
+\hspace*{\fill}
+\caption{The tangent vector shows the subject's smile, in particular, its shape, shading, and teeth and cheek detail (notice the right dimple), better than the recovered image. Images (b) and (c) were recovered from PCA dimension $m_\mathrm{PCA}=30$. }
+\label{fig:AR_PCA_4}
+\end{figure}
+
+
+\begin{table*}[!htb]
+\small{
+\centering
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+& \multicolumn{2}{|c|}{$m_{\mathrm{PCA}} = 30$} & \multicolumn{2}{|c|}{$m_{\mathrm{PCA}} = 56$} & \multicolumn{2}{|c|}{$m_{\mathrm{PCA}} = 120$} \\
+\hline
+ & 	 & \% Increased Acc. & 	 & \% Increased Acc. & 	 & \% Increased Acc. \\
+Database & Energy	 & SRC / SRC$_\mathrm{pruned}$ & Energy & SRC / SRC$_\mathrm{pruned}$ &	Energy & SRC / SRC$_\mathrm{pruned}$ \\
+\hline
+AR-1	&	0.4527	& 3.90/3.86 &	0.5322	& 1.87/1.91 &	0.6522 & 0.80/0.60	\\
+AR-2 	&	0.4137	& 3.83/2.36 &	0.4884	& 1.31/0.63 &	0.5988 & 0.62/0.53	\\
+Extended Yale B	&	0.3954	& 2.46/2.45 &	 0.4803 & 1.59/1.59 	&	0.6055 & 0.77/0.74	\\
+ORL	&	0.5385	& 1.34/0.05 &	0.6581	& 1.26/-0.04 &	0.8487 & 1.73/0.03	\\
+\hline
+\end{tabular}
+\caption{Average energy retained in PCA dimension reduction (over 10 trials) to various dimensions $m_\mathrm{PCA}$ on the face database training sets, as well as the average increase in classification accuracy of LPCA-SRC over SRC and SRC$_\mathrm{pruned}$. } 
+\label{tab:energy}}
+\end{table*}
+
+
+
+\subsubsection{Summary}
+
+The experimental results on face databases show that LPCA-SRC can achieve higher accuracy than SRC in cases of low sampling and/or nonlinear class manifolds and small PCA feature dimension. We showed that LPCA-SRC had a significant advantage over SRC and the other algorithms for the small class sizes and nonlinear class manifolds of the AR database when the feature dimension was low. We also showed that LPCA-SRC could improve classification on Extended Yale B and ORL through its use of tangent vectors to provide a local approximation of the test sample and its discriminating pruning parameter, respectively. 
+
+The runtime of LPCA-SRC was sometimes much longer than that of SRC, although this was less often seen for small feature dimensions, at which LPCA-SRC tended to excel. The size of the dictionary in LPCA-SRC was observed to be a good predictor of the relationship between the runtimes of LPCA-SRC and SRC, and this could easily be computed (given estimates of the parameters $n$ and $d$) before deciding between the two methods.
+
+To validate our claim that the tangent vectors in LPCA-SRC can contain information lost in stringent PCA dimension reduction, we provided examples from the AR database. We also compared the energy retained in PCA dimension reduction with the increase in accuracy in LPCA-SRC over SRC and saw that there was a correlation.
+
+
+
+\section{Further Discussion and Future Work} \label{sec:fut_work}
+
+This paper presented a modification of SRC called \emph{local principal component analysis SRC}, or ``LPCA-SRC.'' Through the use of tangent vectors, LPCA-SRC is designed to increase the sampling density of training sets and thus improve class discrimination on databases with sparsely sampled and/or nonlinear class manifolds. The LPCA-SRC algorithm computes basis vectors of approximate tangent hyperplanes at the training samples in each class and replaces the dictionary of training samples in SRC with a local dictionary computed from shifted and scaled versions of these vectors and their corresponding training samples. Using a synthetic database and three face databases, we showed that LPCA-SRC can regularly achieve higher accuracy than SRC in cases of sparsely sampled and/or nonlinear class manifolds, low noise, and relatively small PCA feature dimension.
+
+To address the issue of parameter setting, we suggested several viable methods for setting the class manifold dimension estimate $d$. It is important to note that in the case of small training sets, e.g., many face recognition problems, there are few options for the number-of-neighbors parameter $n$---and consequently for $d$ by Eq.~\eqref{eq:dn_range}---and so these values can easily be set using cross-validation, as in our experiments. When the training sets are very small (i.e., $N_l = 4$ or 5), one could simply set the parameters $d$ and $n$ to their maximum values, i.e., $d=n=N_{l_\mathrm{min}}-2$, per Eq.~\eqref{eq:dn_range}. On the other hand, when algorithm efficiency is paramount, simply setting $d=1$ may suffice.
+
+One disadvantage of this method is its high computational cost. SRC is already expensive due to its $\ell^1$-minimization procedure; in LPCA-SRC, the computation of tangent vectors is added to the algorithm's workload. The size of the dictionary in LPCA-SRC may be larger or smaller than that of SRC, depending on the LPCA-SRC parameters $n$ and $d$ and the effect of the pruning parameter $r$. Thus LPCA-SRC can be slower or faster than SRC. As mentioned, simple computations based on the training set could render a relative cost estimate of using LPCA-SRC instead of SRC. 
+
+Additionally, as we saw on the synthetic database, the usefulness of the tangent vectors in LPCA-SRC decreases as the noise level in the training data increases. This problem could potentially be alleviated by using the method proposed by Kaslovsky and Meyer \cite{mey:tan} to estimate clean points on the manifolds from noisy samples and then computing the tangent vectors at these points. Note that the case of large training sample noise was the only case for which we saw LPCA-SRC not obtain higher accuracy than SRC. Thus LPCA-SRC should be preferred over SRC in low noise scenarios on either small-scale problems (e.g., the size of ORL) or when achieving a modest (e.g., $1\%-4\%$) boost in accuracy is worth potentially higher computational cost.
+
+
+
+Open questions regarding LPCA-SRC include whether or not the aforementioned general trends hold for different methods of dimension reduction besides PCA. Additionally, one could compare the performance of the ``group'' or ``per-class'' methods of the above representation-based algorithms, in which test samples are approximated using class-specific dictionaries (similarly to as in TDC1). Lastly, one could gain insight into the role of $\ell^1$-minimization in SRC by comparing LPCA-SRC and SRC$_\mathrm{pruned}$ to versions of these algorithms that replace the $\ell^1$-norm with the $\ell^2$-norm, analogous to the work of Zhang et al.\ in their \emph{collaborative representation-based representation} model \cite{zha:crc2}. This is part of our ongoing work, which we hope to report at a later date. 
+
+
+
+\section*{Acknowledgments}
+
+C. Weaver's research on this project was conducted with government support under contract FA9550-11-C-0028 and awarded by DoD, Air Force Office of Scientific Research, National Defense Science and Engineering Graduate (NDSEG) Fellowship, 32 CFR 168a. She was also supported by National Science Foundation VIGRE DMS-0636297 and NSF DMS-1418779. N. Saito was partially supported by ONR grants N00014-12-1-0177 and N00014-16-1-2255, as well as NSF DMS-1418779.
+  
+
+
+
+\bibliography{Bib_Master}
+
+
+\end{document}

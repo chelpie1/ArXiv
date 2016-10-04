@@ -1,0 +1,233 @@
+\begin{thebibliography}{10}
+\expandafter\ifx\csname url\endcsname\relax
+  \def\url#1{\texttt{#1}}\fi
+\expandafter\ifx\csname urlprefix\endcsname\relax\def\urlprefix{URL }\fi
+\expandafter\ifx\csname href\endcsname\relax
+  \def\href#1#2{#2} \def\path#1{#1}\fi
+
+\bibitem{lecun:mnist}
+Y.~Le{C}un, L.~Bottou, Y.~Bengio, P.~Haffner, Gradient-based learning applied
+  to document recognition, Proceedings of the IEEE 86~(11) (1998) 2278--2324.
+\newblock \href {http://dx.doi.org/10.1109/5.726791}
+  {\path{doi:10.1109/5.726791}}.
+
+\bibitem{wri:src}
+J.~Wright, A.~Y. Yang, A.~Ganesh, S.~S. Sastry, Y.~Ma, Robust face recognition
+  via sparse representation, IEEE Trans. Pattern Anal. Mach. Intell. 31~(2)
+  (2009) 210--227.
+\newblock \href {http://dx.doi.org/10.1109/TPAMI.2008.79}
+  {\path{doi:10.1109/TPAMI.2008.79}}.
+
+\bibitem{cev:fr}
+H.~Cevikalp, H.~S. Yavuz, M.~A. Cay, A.~Barkana, Two-dimensional subspace
+  classifiers for face recognition, Neurocomputing 72~(4–6) (2009) 1111 --
+  1120, {B}rain Inspired Cognitive Systems (BICS 2006) / Interplay Between
+  Natural and Artificial Computation (IWINAC 2007).
+\newblock \href {http://dx.doi.org/10.1016/j.neucom.2008.02.015}
+  {\path{doi:10.1016/j.neucom.2008.02.015}}.
+
+\bibitem{sur:fr}
+R.~Patel, N.~Rathod, A.~Shah, Comparative analysis of face recognition
+  approaches: A survey, International Journal of Computer Applications 57~(17)
+  (2012) 50--69.
+
+\bibitem{ssfr:sur}
+X.~Tan, S.~Chen, Z.-H. Zhou, F.~Zhang, Face recognition from a single image per
+  person: A survey, Pattern Recognition 39~(9) (2006) 1725 -- 1745.
+\newblock \href {http://dx.doi.org/10.1016/j.patcog.2006.03.013}
+  {\path{doi:10.1016/j.patcog.2006.03.013}}.
+
+\bibitem{can:spa}
+E.~Candes, Mathematics of sparsity (and a few other things), in: Proceedings of
+  the International Congress of Mathematicians, Seoul, South Korea, 2014.
+
+\bibitem{don:und}
+D.~L. Donoho, For most large underdetermined systems of linear equations the
+  minimal {$l_1$}-norm solution is also the sparsest solution, Comm. Pure Appl.
+  Math. 59~(6) (2006) 797--829.
+\newblock \href {http://dx.doi.org/10.1002/cpa.20132}
+  {\path{doi:10.1002/cpa.20132}}.
+
+\bibitem{elh:ssc}
+E.~Elhamifar, R.~Vidal, Sparse subspace clustering, in: 2009 IEEE Conference on
+  Computer Vision and Pattern Recognition, 2009, pp. 2790--2797.
+\newblock \href {http://dx.doi.org/10.1109/CVPR.2009.5206547}
+  {\path{doi:10.1109/CVPR.2009.5206547}}.
+
+\bibitem{qiao:spp}
+L.~Qiao, S.~Chen, X.~Tan, Sparsity preserving projections with applications to
+  face recognition, Pattern Recognition 43~(1) (2010) 331--341.
+\newblock \href {http://dx.doi.org/10.1016/j.patcog.2009.05.005}
+  {\path{doi:10.1016/j.patcog.2009.05.005}}.
+
+\bibitem{yan:sria}
+J.~Yang, J.~Wang, T.~Huang, Learning the sparse representation for
+  classification, in: 2011 IEEE International Conference on Multimedia and Expo
+  (ICME), 2011, pp. 1--6.
+\newblock \href {http://dx.doi.org/10.1109/ICME.2011.6012083}
+  {\path{doi:10.1109/ICME.2011.6012083}}.
+
+\bibitem{sim:tdc}
+P.~Y. Simard, Y.~A. Le{C}un, J.~S. Denker, B.~Victorri, Neural Networks: Tricks
+  of the Trade: Second Edition, Springer Berlin Heidelberg, Berlin, Heidelberg,
+  2012, Ch. Transformation Invariance in Pattern Recognition -- Tangent
+  Distance and Tangent Propagation, pp. 235--269.
+\newblock \href {http://dx.doi.org/10.1007/978-3-642-35289-8_17}
+  {\path{doi:10.1007/978-3-642-35289-8_17}}.
+
+\bibitem{cha:tdc}
+J.~Chang, M.~Kirby, L.~Krakow, J.~Ladd, E.~Murphy, Classification of images
+  with tangent distance, Tech. rep., Colorado State University, Fort Collins,
+  Colorado (May 2004).
+
+\bibitem{yan:ltd}
+J.~Yang, K.~Zhu, N.~Zhong, Local tangent distances for classification problems,
+  in: 2012 IEEE/WIC/ACM International Conferences on Web Intelligence and
+  Intelligent Agent Technology (WI-IAT), Vol.~1, 2012, pp. 396--401.
+\newblock \href {http://dx.doi.org/10.1109/WI-IAT.2012.46}
+  {\path{doi:10.1109/WI-IAT.2012.46}}.
+
+\bibitem{xie:nlsrc}
+J.~Ho, Y.~Xie, B.~C. Vemuri,
+  \href{http://dblp.uni-trier.de/db/conf/icml/icml2013.html#HoXV13}{On a
+  nonlinear generalization of sparse coding and dictionary learning.}, in: ICML
+  (3), Vol.~28 of JMLR Proceedings, JMLR.org, 2013, pp. 1480--1488.
+\newline\urlprefix\url{http://dblp.uni-trier.de/db/conf/icml/icml2013.html#HoXV13}
+
+\bibitem{waq:cnrc}
+J.~Waqas, Z.~Yi, L.~Zhang, Collaborative neighbor representation based
+  classification using {$l_2$}-minimization approach, Pattern Recognition
+  Letters 34~(2) (2013) 201 -- 208.
+\newblock \href {http://dx.doi.org/10.1016/j.patrec.2012.09.024}
+  {\path{doi:10.1016/j.patrec.2012.09.024}}.
+
+\bibitem{wei:lsdl}
+C.-P. Wei, Y.-W. Chao, Y.-R. Yeh, Y.-C.~F. Wang, Locality-sensitive dictionary
+  learning for sparse representation based classification, Pattern Recognition
+  46~(5) (2013) 1277--1287.
+\newblock \href {http://dx.doi.org/10.1016/j.patcog.2012.11.014}
+  {\path{doi:10.1016/j.patcog.2012.11.014}}.
+
+\bibitem{xu:mir}
+Y.~Xu, X.~Li, J.~Yang, D.~Zhang, Integrate the original face image and its
+  mirror image for face recognition, Neurocomputing 131 (2014) 191--199.
+\newblock \href {http://dx.doi.org/10.1016/j.neucom.2013.10.025}
+  {\path{doi:10.1016/j.neucom.2013.10.025}}.
+
+\bibitem{zha:spsrc}
+H.~Zhang, F.~Wang, Y.~Chen, W.~Zhang, K.~Wang, J.~Liu, Sample pair based sparse
+  representation classification for face recognition, Expert Systems with
+  Applications 45 (2016) 352 -- 358.
+\newblock \href {http://dx.doi.org/10.1016/j.eswa.2015.09.058}
+  {\path{doi:10.1016/j.eswa.2015.09.058}}.
+
+\bibitem{row:lle}
+S.~T. Roweis, L.~K. Saul, Nonlinear dimensionality reduction by locally linear
+  embedding, Science 290 (2000) 2323--2326.
+\newblock \href {http://dx.doi.org/10.1126/science.290.5500.2323}
+  {\path{doi:10.1126/science.290.5500.2323}}.
+
+\bibitem{he:lapface}
+X.~He, S.~Yan, Y.~Hu, P.~Niyogi, H.-J. Zhang, Face recognition using
+  {L}aplacianfaces, IEEE Trans. Pattern Anal. Mach. Intell. 27~(3) (2005)
+  328--340.
+\newblock \href {http://dx.doi.org/10.1109/TPAMI.2005.55}
+  {\path{doi:10.1109/TPAMI.2005.55}}.
+
+\bibitem{AR:face}
+A.~Martinez, R.~Benavente,
+  \href{http://www.cat.uab.cat/Public/Publications/1998/MaB1998}{The {A}{R}
+  face database}, Tech. Rep.~24, Computer Vision Center (June 1998).
+\newline\urlprefix\url{http://www.cat.uab.cat/Public/Publications/1998/MaB1998}
+
+\bibitem{sin:vdm}
+A.~Singer, H.-T. Wu, Vector diffusion maps and the connection {L}aplacian,
+  Comm. Pure Appl. Math. 65~(8) (2012) 1067--1144.
+\newblock \href {http://dx.doi.org/10.1002/cpa.21395}
+  {\path{doi:10.1002/cpa.21395}}.
+
+\bibitem{mag:msvd}
+A.~V. Little, M.~Maggioni, L.~Rosasco,
+  \href{http://dspace.mit.edu/handle/1721.1/72597}{Multiscale geometric methods
+  for data sets {I}: Multiscale {SVD}, noise and curvature}, Tech. Rep.
+  MITCSAIL-TR-2012-029/CBCL-310, MIT, Cambridge, MA (Sept 2012).
+\newline\urlprefix\url{http://dspace.mit.edu/handle/1721.1/72597}
+
+\bibitem{cer:dan}
+C.~Ceruti, S.~Bassis, A.~Rozza, G.~Lombardi, E.~Casiraghi, P.~Campadelli,
+  D{ANC}o: An intrinsic dimensionality estimator exploiting angle and norm
+  concentration, Pattern Recognition 47~(8) (2014) 2569 -- 2581.
+\newblock \href {http://dx.doi.org/10.1016/j.patcog.2014.02.013}
+  {\path{doi:10.1016/j.patcog.2014.02.013}}.
+
+\bibitem{don:hom}
+D.~L. Donoho, Y.~Tsaig, Fast solution of {$l_1$}-norm minimization problems
+  when the solution may be sparse, IEEE Trans. Inform. Theory 54~(11) (2008)
+  4789--4812.
+\newblock \href {http://dx.doi.org/10.1109/TIT.2008.929958}
+  {\path{doi:10.1109/TIT.2008.929958}}.
+
+\bibitem{yan:rev}
+A.~Y. Yang, S.~S. Sastry, A.~Ganesh, Y.~Ma, Fast {$\ell$}1-minimization
+  algorithms and an application in robust face recognition: A review, in: 2010
+  17th IEEE International Conference on Image Processing, 2010, pp. 1849--1852.
+\newblock \href {http://dx.doi.org/10.1109/ICIP.2010.5651522}
+  {\path{doi:10.1109/ICIP.2010.5651522}}.
+
+\bibitem{merk:knn}
+C.~Merkwirth, U.~Parlitz, W.~Lauterborn, Fast nearest-neighbor searching for
+  nonlinear signal processing, Phys. Rev. E 62 (2000) 2089--2097.
+\newblock \href {http://dx.doi.org/10.1103/PhysRevE.62.2089}
+  {\path{doi:10.1103/PhysRevE.62.2089}}.
+
+\bibitem{merk:tstool}
+C.~Merkwirth, U.~Parlitz, I.~Wedekind, D.~Engster, W.~Lauterborn, {TSTOOL}
+  homepage, \url{http://www.physik3.gwdg.de/tstool/index.html}, 2009 (accessed
+  6.2.15).
+
+\bibitem{ben:kdtree}
+J.~L. Bentley, Multidimensional binary search trees used for associative
+  searching, Commun. ACM 18~(9) (1975) 509--517.
+\newblock \href {http://dx.doi.org/10.1145/361002.361007}
+  {\path{doi:10.1145/361002.361007}}.
+
+\bibitem{asif:hom}
+M.~Asif, J.~Romberg, {$\ell_1$} homotopy: A {MATLAB} toolbox for homotopy
+  algorithms in {$\ell_1$}-norm minimization problems,
+  \url{http://users.ece.gatech.edu/~sasif/homotopy/}, 2009--2013 (accessed
+  31.3.2015).
+
+\bibitem{geo:illum}
+A.~S. Georghiades, P.~N. Belhumeur, D.~J. Kriegman, From few to many:
+  illumination cone models for face recognition under variable lighting and
+  pose, IEEE Trans. Pattern Anal. Mach. Intell. 23~(6) (2001) 643--660.
+\newblock \href {http://dx.doi.org/10.1109/34.927464}
+  {\path{doi:10.1109/34.927464}}.
+
+\bibitem{att:orl}
+{AT\&T Laboratories Cambridge}, The database of faces,
+  \url{http://www.cl.cam.ac.uk/research/dtg/attarchive/facedatabase.html},
+  1992-1994 (accessed 26.3.2016).
+
+\bibitem{lee:linss}
+K.-C. Lee, J.~Ho, D.~Kriegman, Acquiring linear subspaces for face recognition
+  under variable lighting, IEEE Trans. Pattern Anal. Mach. Intell. 27~(5)
+  (2005) 684--698.
+\newblock \href {http://dx.doi.org/10.1109/TPAMI.2005.92}
+  {\path{doi:10.1109/TPAMI.2005.92}}.
+
+\bibitem{mey:tan}
+D.~N. Kaslovsky, F.~G. Meyer, Non-asymptotic analysis of tangent space
+  perturbation, Inf. Inference 3~(2) (2014) 134--187.
+\newblock \href {http://dx.doi.org/10.1093/imaiai/iau004}
+  {\path{doi:10.1093/imaiai/iau004}}.
+
+\bibitem{zha:crc2}
+L.~Zhang, M.~Yang, X.~Feng, Sparse representation or collaborative
+  representation: Which helps face recognition?, in: Proceedings of the 2011
+  International Conference on Computer Vision, IEEE Computer Society,
+  Washington, DC, USA, 2011, pp. 471--478.
+\newblock \href {http://dx.doi.org/10.1109/ICCV.2011.6126277}
+  {\path{doi:10.1109/ICCV.2011.6126277}}.
+
+\end{thebibliography}
